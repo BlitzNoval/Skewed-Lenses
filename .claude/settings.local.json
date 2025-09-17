@@ -11,7 +11,18 @@
       "Bash(nvm install:*)",
       "Bash(npm:*)",
       "Bash(nvm use:*)",
-      "Bash(bash:*)"
+      "Bash(bash:*)",
+      "Bash(python:*)",
+      "Bash(sudo apt install:*)",
+      "Bash(apt list:*)",
+      "Bash(pip3 install:*)",
+      "Bash(curl:*)",
+      "Bash(mv:*)",
+      "Bash(git rm:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git config:*)"
     ],
     "deny": [],
     "ask": []
