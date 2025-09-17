@@ -1,0 +1,126 @@
+.voice-recorder {
+  max-width: 600px;
+  margin: 2rem auto;
+  padding: 1.5rem;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+}
+
+.voice-recorder h2 {
+  color: #00ff41;
+  margin-bottom: 1rem;
+  font-weight: normal;
+  font-size: 1.4rem;
+  text-transform: lowercase;
+}
+
+.recorder-controls {
+  margin: 1.5rem 0;
+}
+
+.record-btn, .stop-btn {
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+  border: 1px solid #555;
+  background: #222;
+  color: #fff;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.record-btn:hover:not(:disabled) {
+  background: #333;
+  border-color: #00ff41;
+}
+
+.record-btn:disabled {
+  background: #111;
+  color: #555;
+  cursor: not-allowed;
+}
+
+.stop-btn {
+  background: #222;
+  border-color: #ff4444;
+}
+
+.stop-btn:hover {
+  background: #333;
+  border-color: #ff6666;
+}
+
+.recording-indicator {
+  margin: 1rem 0;
+  font-size: 0.9rem;
+  color: #ff4444;
+  font-family: 'Courier New', monospace;
+  text-transform: uppercase;
+}
+
+.pulse {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+
+.processing {
+  margin: 1rem 0;
+  font-size: 0.9rem;
+  color: #888;
+  font-family: 'Courier New', monospace;
+}
+
+.transcription {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: #0a0a0a;
+  border: 1px solid #333;
+  text-align: left;
+}
+
+.transcription h3 {
+  color: #00ff41;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  font-weight: normal;
+  text-transform: lowercase;
+}
+
+.transcription p {
+  color: #ccc;
+  font-size: 1rem;
+  line-height: 1.4;
+  margin: 0;
+  font-family: 'Courier New', monospace;
+}
+
+.error {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: #0a0a0a;
+  border: 1px solid #ff4444;
+  text-align: left;
+}
+
+.error h3 {
+  color: #ff4444;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  font-weight: normal;
+  text-transform: lowercase;
+}
+
+.error p {
+  color: #ccc;
+  margin: 0;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+}
