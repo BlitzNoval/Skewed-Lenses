@@ -87,7 +87,10 @@ const VoiceRecorder = () => {
       const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5001'
       const response = await fetch(`${API_URL}/transcribe`, {
         method: 'POST',
-        body: formData
+        body: formData,
+        headers: {
+          'ngrok-skip-browser-warning': 'true'
+        }
       })
       
       window.debugLog?.(`backend responded with status: ${response.status}`, 'info')
@@ -125,6 +128,7 @@ const VoiceRecorder = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
         },
         body: JSON.stringify({ text: text })
       })

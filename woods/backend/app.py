@@ -9,6 +9,11 @@ from groq import Groq
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all origins
 
+@app.after_request
+def after_request(response):
+    response.headers.add('ngrok-skip-browser-warning', 'true')
+    return response
+
 # Initialize Groq client
 GROQ_API_KEY = os.getenv('GROQ_API_KEY', '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')
 groq_client = Groq(api_key=GROQ_API_KEY)

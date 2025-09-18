@@ -15,7 +15,11 @@ const DebugConsole = () => {
     try {
       addLog('checking backend health...', 'info')
       const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5001'
-      const response = await fetch(`${API_URL}/health`)
+      const response = await fetch(`${API_URL}/health`, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true'
+        }
+      })
       
       if (response.ok) {
         const data = await response.json()
