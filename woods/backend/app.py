@@ -15,7 +15,7 @@ groq_client = Groq(api_key=GROQ_API_KEY)
 
 # Load the Whisper model
 print("Loading Whisper model...")
-model = whisper.load_model("tiny", device="cpu", download_root=None)
+model = whisper.load_model("base")
 print("Model loaded successfully!")
 
 @app.route('/transcribe', methods=['POST'])
