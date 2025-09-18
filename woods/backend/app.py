@@ -125,7 +125,11 @@ Provide a brief analysis and risk assessment (Low/Medium/High) for dyslexia indi
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    return jsonify({'status': 'healthy', 'model': 'whisper-small'})
+    return jsonify({'status': 'healthy', 'model': 'whisper-tiny'})
+
+@app.route('/', methods=['GET'])
+def root():
+    return jsonify({'message': 'Woods Dyslexia Screening API', 'status': 'running'})
 
 if __name__ == '__main__':
     print("Starting Flask server...")
