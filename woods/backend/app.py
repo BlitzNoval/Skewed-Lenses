@@ -10,13 +10,12 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for React frontend
 
 # Initialize Groq client
-# Replace with your actual Groq API key
-GROQ_API_KEY = "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"
+GROQ_API_KEY = os.getenv('GROQ_API_KEY', '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')
 groq_client = Groq(api_key=GROQ_API_KEY)
 
 # Load the Whisper model
 print("Loading Whisper model...")
-model = whisper.load_model("small")
+model = whisper.load_model("tiny")  # 39MB vs 244MB for faster deployment
 print("Model loaded successfully!")
 
 @app.route('/transcribe', methods=['POST'])
