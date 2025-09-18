@@ -3,3 +3,5 @@ flask-cors==6.0.1
 openai-whisper==20250625
 groq==0.31.1
 gunicorn==23.0.0
+torch==2.8.0+cpu
+--extra-index-url https://download.pytorch.org/whl/cpu
