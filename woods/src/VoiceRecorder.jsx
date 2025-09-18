@@ -4,7 +4,9 @@ import './VoiceRecorder.css'
 const VoiceRecorder = () => {
   const [isRecording, setIsRecording] = useState(false)
   const [transcription, setTranscription] = useState('')
+  const [analysis, setAnalysis] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [error, setError] = useState('')
   
   const mediaRecorderRef = useRef(null)
@@ -14,6 +16,7 @@ const VoiceRecorder = () => {
     try {
       setError('')
       setTranscription('')
+      setAnalysis('')
       window.debugLog?.('requesting microphone access...', 'info')
       
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
@@ -93,6 +96,9 @@ const VoiceRecorder = () => {
       if (result.success) {
         setTranscription(result.text)
         window.debugLog?.(`transcription received: "${result.text.substring(0, 50)}..."`, 'success')
+
+        // Automatically analyze the transcription
+        await analyzeText(result.text)
       } else {
         const errorMsg = 'Transcription failed: ' + result.error
         setError(errorMsg)
@@ -105,6 +111,39 @@ const VoiceRecorder = () => {
       window.debugLog?.(errorMsg, 'error')
     } finally {
       setIsProcessing(false)
+    }
+  }
+
+  const analyzeText = async (text) => {
+    try {
+      setIsAnalyzing(true)
+      window.debugLog?.('starting AI analysis...', 'info')
+
+      const response = await fetch('http://127.0.0.1:5001/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: text })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        setAnalysis(result.analysis)
+        window.debugLog?.('AI analysis complete', 'success')
+      } else {
+        const errorMsg = 'Analysis failed: ' + result.error
+        setError(errorMsg)
+        window.debugLog?.(errorMsg, 'error')
+      }
+
+    } catch (err) {
+      const errorMsg = 'Analysis error: ' + err.message
+      setError(errorMsg)
+      window.debugLog?.(errorMsg, 'error')
+    } finally {
+      setIsAnalyzing(false)
     }
   }
 
@@ -139,14 +178,27 @@ const VoiceRecorder = () => {
 
       {isProcessing && (
         <div className="processing">
-          <span>processing...</span>
+          <span>transcribing audio...</span>
+        </div>
+      )}
+
+      {isAnalyzing && (
+        <div className="processing">
+          <span>analyzing for dyslexia indicators...</span>
         </div>
       )}
 
       {transcription && (
         <div className="transcription">
-          <h3>output:</h3>
+          <h3>transcript:</h3>
           <p>{transcription}</p>
+        </div>
+      )}
+
+      {analysis && (
+        <div className="analysis">
+          <h3>dyslexia screening analysis:</h3>
+          <p>{analysis}</p>
         </div>
       )}
 

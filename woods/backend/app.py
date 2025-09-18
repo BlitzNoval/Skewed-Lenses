@@ -4,9 +4,15 @@ import whisper
 import tempfile
 import os
 import time
+from groq import Groq
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for React frontend
+
+# Initialize Groq client
+# Replace with your actual Groq API key
+GROQ_API_KEY = "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"
+groq_client = Groq(api_key=GROQ_API_KEY)
 
 # Load the Whisper model
 print("Loading Whisper model...")
@@ -68,6 +74,54 @@ def transcribe_audio():
                 print(f"Cleaned up temp file: {temp_path}")
             
     except Exception as e:
+        return jsonify({'error': str(e), 'success': False}), 500
+
+@app.route('/analyze', methods=['POST'])
+def analyze_text():
+    try:
+        data = request.get_json()
+        if not data or 'text' not in data:
+            return jsonify({'error': 'No text provided'}), 400
+
+        text = data['text']
+        print(f"Analyzing text: {text[:100]}...")
+
+        # Create prompt for dyslexia screening
+        prompt = f"""Analyze this speech transcript for potential dyslexia indicators. Look for:
+- Reading difficulties or hesitations
+- Word substitutions or mispronunciations
+- Letter/sound confusion
+- Rhythm and fluency issues
+- Self-corrections or struggles
+
+Text: "{text}"
+
+Provide a brief analysis and risk assessment (Low/Medium/High) for dyslexia indicators."""
+
+        # Call Groq API
+        chat_completion = groq_client.chat.completions.create(
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt,
+                }
+            ],
+            model="llama-3.1-8b-instant",  # Current fast Llama model
+            temperature=0.1,  # Low temperature for consistent analysis
+            max_tokens=1000
+        )
+
+        analysis = chat_completion.choices[0].message.content
+        print(f"Analysis complete: {analysis[:100]}...")
+
+        return jsonify({
+            'analysis': analysis,
+            'success': True,
+            'original_text': text
+        })
+
+    except Exception as e:
+        print(f"Analysis error: {e}")
         return jsonify({'error': str(e), 'success': False}), 500
 
 @app.route('/health', methods=['GET'])

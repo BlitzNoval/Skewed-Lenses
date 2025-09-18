@@ -78,7 +78,7 @@
   font-family: 'Courier New', monospace;
 }
 
-.transcription {
+.transcription, .analysis {
   margin: 1.5rem 0;
   padding: 1rem;
   background: #0a0a0a;
@@ -86,7 +86,7 @@
   text-align: left;
 }
 
-.transcription h3 {
+.transcription h3, .analysis h3 {
   color: #00ff41;
   margin-bottom: 0.5rem;
   font-size: 1rem;
@@ -94,12 +94,20 @@
   text-transform: lowercase;
 }
 
-.transcription p {
+.analysis h3 {
+  color: #ffaa00;
+}
+
+.transcription p, .analysis p {
   color: #ccc;
   font-size: 1rem;
   line-height: 1.4;
   margin: 0;
   font-family: 'Courier New', monospace;
+}
+
+.analysis {
+  border-color: #ffaa00;
 }
 
 .error {
