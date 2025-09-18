@@ -15,7 +15,7 @@ groq_client = Groq(api_key=GROQ_API_KEY)
 
 # Load the Whisper model
 print("Loading Whisper model...")
-model = whisper.load_model("tiny")  # 39MB vs 244MB for faster deployment
+model = whisper.load_model("tiny", device="cpu", download_root=None)
 print("Model loaded successfully!")
 
 @app.route('/transcribe', methods=['POST'])
@@ -54,7 +54,7 @@ def transcribe_audio():
             print(f"File size on disk: {os.path.getsize(temp_path)} bytes")
 
             # Try to transcribe
-            result = model.transcribe(temp_path)
+            result = model.transcribe(temp_path, fp16=False, language='en', task='transcribe')
             print(f"Transcription successful: {result['text']}")
 
             return jsonify({
