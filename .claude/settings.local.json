@@ -25,7 +25,8 @@
       "Bash(git config:*)",
       "Bash(source:*)",
       "Bash(pip install:*)",
-      "Bash(./venv/Scripts/activate)"
+      "Bash(./venv/Scripts/activate)",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []
