@@ -84,7 +84,8 @@ const VoiceRecorder = () => {
         window.debugLog?.(`FormData: ${pair[0]} = ${pair[1].size || pair[1]} bytes`, 'info')
       }
       
-      const response = await fetch('http://127.0.0.1:5001/transcribe', {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5001'
+      const response = await fetch(`${API_URL}/transcribe`, {
         method: 'POST',
         body: formData
       })
@@ -119,7 +120,8 @@ const VoiceRecorder = () => {
       setIsAnalyzing(true)
       window.debugLog?.('starting AI analysis...', 'info')
 
-      const response = await fetch('http://127.0.0.1:5001/analyze', {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5001'
+      const response = await fetch(`${API_URL}/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

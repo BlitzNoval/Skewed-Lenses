@@ -14,7 +14,8 @@ const DebugConsole = () => {
   const checkBackendHealth = async () => {
     try {
       addLog('checking backend health...', 'info')
-      const response = await fetch('http://127.0.0.1:5001/health')
+      const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5001'
+      const response = await fetch(`${API_URL}/health`)
       
       if (response.ok) {
         const data = await response.json()
