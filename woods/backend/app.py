@@ -7,7 +7,7 @@ import time
 from groq import Groq
 
 app = Flask(__name__)
-CORS(app, origins=['https://skewed-lenses.vercel.app', 'http://localhost:5173', 'http://127.0.0.1:5173'])
+CORS(app, origins="*")  # Allow all origins for now
 
 # Initialize Groq client
 GROQ_API_KEY = os.getenv('GROQ_API_KEY', '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')
