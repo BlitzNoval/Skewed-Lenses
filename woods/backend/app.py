@@ -88,10 +88,41 @@ def analyze_text():
             return jsonify({'error': 'No text provided'}), 400
 
         text = data['text']
-        print(f"Analyzing text: {text[:100]}...")
+        mode = data.get('mode', 'free')  # 'free' or 'reading'
+        expected_text = data.get('expectedText', None)
 
-        # Create prompt for dyslexia screening
-        prompt = f"""Analyze this speech transcript for potential dyslexia indicators. Look for:
+        print(f"Analyzing text in {mode} mode: {text[:100]}...")
+
+        if mode == 'reading' and expected_text:
+            # Reading assessment analysis with comparison
+            print(f"Expected text: {expected_text[:100]}...")
+
+            prompt = f"""Compare the expected reading passage with what the user actually read aloud. Analyze for dyslexia-specific reading indicators:
+
+EXPECTED TEXT:
+"{expected_text}"
+
+ACTUAL READING:
+"{text}"
+
+Please analyze:
+1. Word accuracy - exact matches vs substitutions/omissions
+2. Dyslexia-specific patterns:
+   - Letter reversals (b/d, p/q, etc.)
+   - Word substitutions (similar looking words)
+   - Omitted or added words
+   - Phonetic errors or complex sound confusion
+3. Reading fluency indicators
+4. Overall reading accuracy percentage
+
+Provide:
+- Detailed comparison highlighting specific differences
+- Dyslexia risk assessment (Low/Medium/High) based on reading errors
+- Specific patterns that suggest dyslexia vs. normal reading errors"""
+
+        else:
+            # Free speech analysis (original prompt)
+            prompt = f"""Analyze this speech transcript for potential dyslexia indicators. Look for:
 - Reading difficulties or hesitations
 - Word substitutions or mispronunciations
 - Letter/sound confusion
@@ -118,11 +149,17 @@ Provide a brief analysis and risk assessment (Low/Medium/High) for dyslexia indi
         analysis = chat_completion.choices[0].message.content
         print(f"Analysis complete: {analysis[:100]}...")
 
-        return jsonify({
+        response_data = {
             'analysis': analysis,
             'success': True,
-            'original_text': text
-        })
+            'original_text': text,
+            'mode': mode
+        }
+
+        if mode == 'reading' and expected_text:
+            response_data['expected_text'] = expected_text
+
+        return jsonify(response_data)
 
     except Exception as e:
         print(f"Analysis error: {e}")

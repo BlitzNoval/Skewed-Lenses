@@ -132,3 +132,169 @@
   font-family: 'Courier New', monospace;
   font-size: 0.9rem;
 }
+
+/* Reading Assessment Styles */
+.mode-selection {
+  margin: 1rem 0;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.mode-btn {
+  padding: 0.6rem 1rem;
+  font-size: 0.9rem;
+  border: 1px solid #555;
+  background: #222;
+  color: #fff;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.mode-btn:hover {
+  background: #333;
+  border-color: #00ff41;
+}
+
+.mode-btn.active {
+  background: #00ff41;
+  color: #000;
+  border-color: #00ff41;
+}
+
+.passage-selection {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: #0a0a0a;
+  border: 1px solid #333;
+}
+
+.passage-selection h3 {
+  color: #00ff41;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  font-weight: normal;
+  text-transform: lowercase;
+}
+
+.passage-btn {
+  display: block;
+  width: 100%;
+  margin: 0.5rem 0;
+  padding: 0.8rem;
+  font-size: 0.9rem;
+  border: 1px solid #555;
+  background: #222;
+  color: #fff;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  text-align: left;
+}
+
+.passage-btn:hover {
+  background: #333;
+  border-color: #00ff41;
+}
+
+.reading-passage {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: #0a0a0a;
+  border: 1px solid #00ff41;
+}
+
+.reading-passage h3 {
+  color: #00ff41;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  font-weight: normal;
+  text-transform: lowercase;
+}
+
+.passage-text {
+  background: #111;
+  padding: 1rem;
+  border: 1px solid #333;
+  margin: 1rem 0;
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  border-left: 3px solid #00ff41;
+}
+
+.change-passage-btn {
+  padding: 0.6rem 1rem;
+  font-size: 0.9rem;
+  border: 1px solid #555;
+  background: #222;
+  color: #fff;
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 1rem;
+}
+
+.change-passage-btn:hover {
+  background: #333;
+  border-color: #ffaa00;
+}
+
+.reading-comparison {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  background: #0a0a0a;
+  border: 1px solid #ffaa00;
+}
+
+.reading-comparison h3 {
+  color: #ffaa00;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  font-weight: normal;
+  text-transform: lowercase;
+}
+
+.comparison-sections {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr 1fr;
+}
+
+.expected-section, .actual-section {
+  padding: 1rem;
+  background: #111;
+  border: 1px solid #333;
+}
+
+.expected-section h4, .actual-section h4 {
+  color: #00ff41;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: normal;
+  text-transform: lowercase;
+}
+
+.actual-section h4 {
+  color: #ffaa00;
+}
+
+.expected-text, .actual-text {
+  color: #ccc;
+  font-family: 'Courier New', monospace;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .comparison-sections {
+    grid-template-columns: 1fr;
+  }
+
+  .mode-selection {
+    flex-direction: column;
+  }
+}
