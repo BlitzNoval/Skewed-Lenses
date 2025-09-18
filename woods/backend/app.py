@@ -129,4 +129,5 @@ def health_check():
 
 if __name__ == '__main__':
     print("Starting Flask server...")
-    app.run(debug=True, port=5001, threaded=True)
+    port = int(os.getenv('PORT', 5001))
+    app.run(host='0.0.0.0', port=port, debug=False)
