@@ -165,9 +165,58 @@ Provide a brief analysis and risk assessment (Low/Medium/High) for dyslexia indi
         print(f"Analysis error: {e}")
         return jsonify({'error': str(e), 'success': False}), 500
 
+@app.route('/transcribe-stream', methods=['POST'])
+def transcribe_stream():
+    try:
+        print("Stream transcribe request received")
+
+        if 'audio' not in request.files:
+            return jsonify({'error': 'No audio chunk provided'}), 400
+
+        audio_file = request.files['audio']
+        chunk_id = request.form.get('chunk_id', '0')
+
+        print(f"Processing audio chunk {chunk_id}: {audio_file.filename}")
+
+        audio_data = audio_file.read()
+        print(f"Chunk data size: {len(audio_data)} bytes")
+
+        if len(audio_data) == 0:
+            return jsonify({'error': 'No audio data in chunk'}), 400
+
+        # Save chunk to temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as temp_file:
+            temp_file.write(audio_data)
+            temp_path = temp_file.name
+
+        try:
+            # Process chunk with Whisper
+            result = model.transcribe(temp_path)
+            transcribed_text = result['text'].strip()
+
+            print(f"Chunk {chunk_id} transcribed: '{transcribed_text}'")
+
+            return jsonify({
+                'text': transcribed_text,
+                'chunk_id': chunk_id,
+                'confidence': result.get('segments', [{}])[0].get('avg_logprob', 0) if result.get('segments') else 0,
+                'success': True
+            })
+
+        except Exception as transcribe_error:
+            print(f"Stream transcription failed: {transcribe_error}")
+            return jsonify({'error': str(transcribe_error), 'success': False}), 500
+
+        finally:
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+
+    except Exception as e:
+        return jsonify({'error': str(e), 'success': False}), 500
+
 @app.route('/health', methods=['GET'])
 def health_check():
-    return jsonify({'status': 'healthy', 'model': 'whisper-tiny'})
+    return jsonify({'status': 'healthy', 'model': 'whisper-small'})
 
 @app.route('/', methods=['GET'])
 def root():

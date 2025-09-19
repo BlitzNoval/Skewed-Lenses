@@ -1,6 +1,33 @@
 import { useState, useRef } from 'react'
 import './VoiceRecorder.css'
 
+const HighlightedText = ({ expectedText, spokenText }) => {
+  const expectedWords = expectedText.split(' ')
+  const spokenWords = spokenText.split(' ')
+
+  return (
+    <div className="highlighted-passage">
+      {expectedWords.map((word, index) => {
+        const isSpoken = index < spokenWords.length
+        const isCorrect = isSpoken && spokenWords[index]?.toLowerCase() === word.toLowerCase()
+        const isIncorrect = isSpoken && spokenWords[index]?.toLowerCase() !== word.toLowerCase()
+
+        let className = 'word'
+        if (isCorrect) className += ' correct'
+        else if (isIncorrect) className += ' incorrect'
+        else if (index === spokenWords.length) className += ' current'
+        else className += ' pending'
+
+        return (
+          <span key={index} className={className}>
+            {word}{' '}
+          </span>
+        )
+      })}
+    </div>
+  )
+}
+
 const readingPassages = {
   1: {
     title: "Church Pears (Beginning)",
@@ -19,6 +46,7 @@ const readingPassages = {
 const VoiceRecorder = () => {
   const [isRecording, setIsRecording] = useState(false)
   const [transcription, setTranscription] = useState('')
+  const [liveTranscription, setLiveTranscription] = useState('')
   const [analysis, setAnalysis] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -26,52 +54,72 @@ const VoiceRecorder = () => {
   const [mode, setMode] = useState('free') // 'free' or 'reading'
   const [selectedPassage, setSelectedPassage] = useState(null)
   const [readingResults, setReadingResults] = useState(null)
-  
+  const [useRealTime, setUseRealTime] = useState(false)
+  const [readingProgress, setReadingProgress] = useState(0)
+  const [readingPace, setReadingPace] = useState(0)
+
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
+  const streamingIntervalRef = useRef(null)
+  const chunkCounterRef = useRef(0)
+  const startTimeRef = useRef(null)
+  const wordCountRef = useRef(0)
 
   const startRecording = async () => {
     try {
       setError('')
       setTranscription('')
+      setLiveTranscription('')
       setAnalysis('')
+      setReadingProgress(0)
+      setReadingPace(0)
+      chunkCounterRef.current = 0
+      startTimeRef.current = Date.now()
+      wordCountRef.current = 0
+
       window.debugLog?.('requesting microphone access...', 'info')
-      
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       window.debugLog?.('microphone access granted', 'success')
-      
+
       mediaRecorderRef.current = new MediaRecorder(stream)
       audioChunksRef.current = []
 
-      mediaRecorderRef.current.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data)
-          window.debugLog?.(`audio chunk received: ${event.data.size} bytes`, 'info')
+      if (useRealTime) {
+        // Real-time streaming mode
+        startStreamingTranscription(stream)
+      } else {
+        // Original mode - process after recording stops
+        mediaRecorderRef.current.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunksRef.current.push(event.data)
+            window.debugLog?.(`audio chunk received: ${event.data.size} bytes`, 'info')
+          }
+        }
+
+        mediaRecorderRef.current.onstop = async () => {
+          window.debugLog?.(`total chunks: ${audioChunksRef.current.length}`, 'info')
+
+          if (audioChunksRef.current.length === 0) {
+            window.debugLog?.('no audio data recorded', 'error')
+            setError('No audio data was recorded')
+            setIsProcessing(false)
+            return
+          }
+
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+          window.debugLog?.(`created blob: ${audioBlob.size} bytes`, 'info')
+          await sendAudioToBackend(audioBlob)
+
+          // Stop all tracks to release microphone
+          stream.getTracks().forEach(track => track.stop())
         }
       }
 
-      mediaRecorderRef.current.onstop = async () => {
-        window.debugLog?.(`total chunks: ${audioChunksRef.current.length}`, 'info')
-
-        if (audioChunksRef.current.length === 0) {
-          window.debugLog?.('no audio data recorded', 'error')
-          setError('No audio data was recorded')
-          setIsProcessing(false)
-          return
-        }
-
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
-        window.debugLog?.(`created blob: ${audioBlob.size} bytes`, 'info')
-        await sendAudioToBackend(audioBlob)
-
-        // Stop all tracks to release microphone
-        stream.getTracks().forEach(track => track.stop())
-      }
-
-      mediaRecorderRef.current.start(1000)
+      mediaRecorderRef.current.start(useRealTime ? 500 : 1000) // 500ms chunks for real-time
       setIsRecording(true)
       window.debugLog?.('recording started', 'success')
-      
+
     } catch (err) {
       const errorMsg = 'Could not access microphone: ' + err.message
       setError(errorMsg)
@@ -79,12 +127,107 @@ const VoiceRecorder = () => {
     }
   }
 
+  const startStreamingTranscription = (stream) => {
+    let chunkBuffer = []
+
+    mediaRecorderRef.current.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        chunkBuffer.push(event.data)
+
+        // Send chunk for transcription every 500ms
+        if (chunkBuffer.length > 0) {
+          const chunkBlob = new Blob(chunkBuffer, { type: 'audio/webm' })
+          sendChunkForTranscription(chunkBlob, chunkCounterRef.current)
+          chunkCounterRef.current++
+
+          // Keep all chunks for final processing
+          audioChunksRef.current.push(...chunkBuffer)
+          chunkBuffer = []
+        }
+      }
+    }
+
+    mediaRecorderRef.current.onstop = () => {
+      // Stop streaming and do final analysis
+      if (streamingIntervalRef.current) {
+        clearInterval(streamingIntervalRef.current)
+      }
+
+      // Create final transcript for analysis
+      const fullTranscript = liveTranscription
+      setTranscription(fullTranscript)
+
+      if (fullTranscript.trim()) {
+        analyzeText(fullTranscript)
+      }
+
+      stream.getTracks().forEach(track => track.stop())
+    }
+  }
+
+  const sendChunkForTranscription = async (chunkBlob, chunkId) => {
+    try {
+      const formData = new FormData()
+      formData.append('audio', chunkBlob, `chunk_${chunkId}.webm`)
+      formData.append('chunk_id', chunkId.toString())
+
+      const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5001'
+      const response = await fetch(`${API_URL}/transcribe-stream`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'ngrok-skip-browser-warning': 'true'
+        }
+      })
+
+      const result = await response.json()
+
+      if (result.success && result.text.trim()) {
+        const newText = result.text.trim()
+
+        setLiveTranscription(prev => {
+          const updated = prev + ' ' + newText
+          updateReadingProgress(updated)
+          return updated.trim()
+        })
+
+        window.debugLog?.(`Chunk ${chunkId} transcribed: "${newText}"`, 'success')
+      }
+
+    } catch (err) {
+      window.debugLog?.(`Chunk transcription error: ${err.message}`, 'error')
+    }
+  }
+
+  const updateReadingProgress = (currentTranscription) => {
+    if (mode === 'reading' && selectedPassage) {
+      const expectedWords = readingPassages[selectedPassage].text.split(' ')
+      const spokenWords = currentTranscription.split(' ')
+
+      // Calculate progress
+      const progress = Math.min((spokenWords.length / expectedWords.length) * 100, 100)
+      setReadingProgress(progress)
+
+      // Calculate reading pace (words per minute)
+      const timeElapsed = (Date.now() - startTimeRef.current) / 1000 / 60 // minutes
+      const wordsPerMinute = timeElapsed > 0 ? spokenWords.length / timeElapsed : 0
+      setReadingPace(Math.round(wordsPerMinute))
+
+      wordCountRef.current = spokenWords.length
+    }
+  }
+
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop()
       setIsRecording(false)
-      setIsProcessing(true)
-      window.debugLog?.('recording stopped, processing...', 'info')
+
+      if (!useRealTime) {
+        setIsProcessing(true)
+        window.debugLog?.('recording stopped, processing...', 'info')
+      } else {
+        window.debugLog?.('real-time recording stopped', 'info')
+      }
     }
   }
 
@@ -197,6 +340,7 @@ const VoiceRecorder = () => {
             setSelectedPassage(null)
             setReadingResults(null)
             setTranscription('')
+            setLiveTranscription('')
             setAnalysis('')
           }}
           className={`mode-btn ${mode === 'free' ? 'active' : ''}`}
@@ -209,12 +353,28 @@ const VoiceRecorder = () => {
             setSelectedPassage(null)
             setReadingResults(null)
             setTranscription('')
+            setLiveTranscription('')
             setAnalysis('')
           }}
           className={`mode-btn ${mode === 'reading' ? 'active' : ''}`}
         >
           READING ASSESSMENT
         </button>
+      </div>
+
+      {/* Real-time toggle */}
+      <div className="realtime-toggle">
+        <label className="toggle-label">
+          <input
+            type="checkbox"
+            checked={useRealTime}
+            onChange={(e) => setUseRealTime(e.target.checked)}
+            disabled={isRecording}
+          />
+          <span className="toggle-text">
+            REAL-TIME TRANSCRIPTION {useRealTime ? '(ON)' : '(OFF)'}
+          </span>
+        </label>
       </div>
 
       {/* Passage selection for reading mode */}
@@ -273,6 +433,26 @@ const VoiceRecorder = () => {
         )}
       </div>
 
+      {/* Reading progress indicators */}
+      {mode === 'reading' && selectedPassage && isRecording && useRealTime && (
+        <div className="reading-stats">
+          <div className="progress-bar">
+            <div className="progress-label">Reading Progress:</div>
+            <div className="progress-container">
+              <div
+                className="progress-fill"
+                style={{ width: `${readingProgress}%` }}
+              ></div>
+              <span className="progress-text">{Math.round(readingProgress)}%</span>
+            </div>
+          </div>
+          <div className="reading-pace">
+            <span className="pace-label">Pace:</span>
+            <span className="pace-value">{readingPace} words/min</span>
+          </div>
+        </div>
+      )}
+
       {isRecording && (
         <div className="recording-indicator">
           <span className="pulse">REC</span>
@@ -291,7 +471,24 @@ const VoiceRecorder = () => {
         </div>
       )}
 
-      {transcription && (
+      {/* Live transcription display */}
+      {useRealTime && liveTranscription && (
+        <div className="live-transcription">
+          <h3>live transcript:</h3>
+          <div className="live-text">
+            {mode === 'reading' && selectedPassage ? (
+              <HighlightedText
+                expectedText={readingPassages[selectedPassage].text}
+                spokenText={liveTranscription}
+              />
+            ) : (
+              <p>{liveTranscription}</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {transcription && !useRealTime && (
         <div className="transcription">
           <h3>transcript:</h3>
           <p>{transcription}</p>
