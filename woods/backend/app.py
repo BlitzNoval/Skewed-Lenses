@@ -1,6 +1,5 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import whisper
 import tempfile
 import os
 import time
@@ -18,10 +17,17 @@ def after_request(response):
 GROQ_API_KEY = os.getenv('GROQ_API_KEY', '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')
 groq_client = Groq(api_key=GROQ_API_KEY)
 
-# Load the Whisper model
-print("Loading Whisper model...")
-model = whisper.load_model("small")
-print("Model loaded successfully!")
+# Lazy load Whisper model
+model = None
+
+def get_whisper_model():
+    global model
+    if model is None:
+        print("Loading Whisper model...")
+        import whisper
+        model = whisper.load_model("small")
+        print("Model loaded successfully!")
+    return model
 
 @app.route('/transcribe', methods=['POST'])
 def transcribe_audio():
@@ -59,7 +65,8 @@ def transcribe_audio():
             print(f"File size on disk: {os.path.getsize(temp_path)} bytes")
 
             # Try to transcribe
-            result = model.transcribe(temp_path)
+            whisper_model = get_whisper_model()
+            result = whisper_model.transcribe(temp_path)
             print(f"Transcription successful: {result['text']}")
 
             return jsonify({
@@ -191,7 +198,8 @@ def transcribe_stream():
 
         try:
             # Process chunk with Whisper
-            result = model.transcribe(temp_path)
+            whisper_model = get_whisper_model()
+            result = whisper_model.transcribe(temp_path)
             transcribed_text = result['text'].strip()
 
             print(f"Chunk {chunk_id} transcribed: '{transcribed_text}'")

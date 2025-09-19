@@ -28,7 +28,13 @@
       "Bash(./venv/Scripts/activate)",
       "Bash(rm:*)",
       "Bash(../../venv/Scripts/python app.py)",
-      "Bash(../../venv/Scripts/python.exe app.py)"
+      "Bash(../../venv/Scripts/python.exe app.py)",
+      "Bash(../../venv/Scripts/python.exe:*)",
+      "Bash(../../../venv/Scripts/python.exe app.py)",
+      "Bash(./venv/Scripts/python.exe woods/backend/app.py:*)",
+      "Bash(./venv/Scripts/pip.exe list)",
+      "Bash(./venv/Scripts/pip.exe install:*)",
+      "Bash(./venv/Scripts/pip.exe show flask)"
     ],
     "deny": [],
     "ask": []
