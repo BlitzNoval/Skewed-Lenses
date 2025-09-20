@@ -22,6 +22,7 @@ function App() {
   const [mediaRecorder, setMediaRecorder] = useState(null)
   const [audioChunks, setAudioChunks] = useState([])
   const [transcribedText, setTranscribedText] = useState('')
+  const [isTranscribing, setIsTranscribing] = useState(false)
 
   // DIBELS passages
   const passages = [
@@ -86,24 +87,35 @@ function App() {
         if (event.data.size > 0) {
           chunks.push(event.data)
 
-          // Send periodic updates for real-time feedback (every 3 seconds)
-          if (chunks.length % 3 === 0) {
-            const partialBlob = new Blob(chunks, { type: 'audio/webm' })
-            const formData = new FormData()
-            formData.append('audio', partialBlob, 'partial.webm')
+          // Send updates every 2 seconds, but only if not already transcribing
+          if (chunks.length % 2 === 0 && !isTranscribing) {
+            setIsTranscribing(true)
 
-            fetch(`${import.meta.env.VITE_API_URL}/transcribe`, {
-              method: 'POST',
-              body: formData,
-            })
-            .then(response => response.json())
-            .then(data => {
-              if (data.success && data.text.trim()) {
-                setTranscribedText(data.text)
-                processTranscribedText(data.text)
-              }
-            })
-            .catch(error => console.error('Real-time transcription error:', error))
+            const partialBlob = new Blob(chunks, { type: 'audio/webm' })
+
+            // Only send if blob is substantial enough (avoid tiny chunks)
+            if (partialBlob.size > 50000) { // 50KB minimum
+              const formData = new FormData()
+              formData.append('audio', partialBlob, 'partial.webm')
+
+              fetch(`${import.meta.env.VITE_API_URL}/transcribe`, {
+                method: 'POST',
+                body: formData,
+              })
+              .then(response => response.json())
+              .then(data => {
+                if (data.success && data.text.trim()) {
+                  setTranscribedText(data.text)
+                  processTranscribedText(data.text)
+                }
+              })
+              .catch(error => console.error('Real-time transcription error:', error))
+              .finally(() => {
+                setIsTranscribing(false)
+              })
+            } else {
+              setIsTranscribing(false)
+            }
           }
         }
       }

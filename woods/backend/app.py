@@ -19,6 +19,7 @@ groq_client = Groq(api_key=GROQ_API_KEY)
 
 # Lazy load Whisper model
 model = None
+is_transcribing = False
 
 def get_whisper_model():
     global model
@@ -31,8 +32,17 @@ def get_whisper_model():
 
 @app.route('/transcribe', methods=['POST'])
 def transcribe_audio():
+    global is_transcribing
+
     try:
         print("Transcribe request received")
+
+        # Skip if already transcribing (prevent queue buildup)
+        if is_transcribing:
+            print("Already transcribing, skipping request")
+            return jsonify({'error': 'Busy transcribing', 'success': False}), 429
+
+        is_transcribing = True
 
         # Check if audio file is in request
         if 'audio' not in request.files:
@@ -51,6 +61,11 @@ def transcribe_audio():
         if len(audio_data) == 0:
             print("No audio data received")
             return jsonify({'error': 'No audio data received'}), 400
+
+        # Skip very small files (likely incomplete)
+        if len(audio_data) < 10000:  # 10KB minimum
+            print("Audio file too small, skipping")
+            return jsonify({'error': 'Audio file too small', 'success': False}), 400
 
         # Save the data to a temporary file
         with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as temp_file:
@@ -83,9 +98,11 @@ def transcribe_audio():
             if os.path.exists(temp_path):
                 os.unlink(temp_path)
                 print(f"Cleaned up temp file: {temp_path}")
-            
+
     except Exception as e:
         return jsonify({'error': str(e), 'success': False}), 500
+    finally:
+        is_transcribing = False
 
 @app.route('/analyze', methods=['POST'])
 def analyze_text():
