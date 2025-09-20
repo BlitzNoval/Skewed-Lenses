@@ -25,6 +25,7 @@ function App() {
   const [isTranscribing, setIsTranscribing] = useState(false)
   const [recognition, setRecognition] = useState(null)
   const [wordStatuses, setWordStatuses] = useState([])
+  const [currentExpectedWordIndex, setCurrentExpectedWordIndex] = useState(0)
 
   // DIBELS passages
   const passages = [
@@ -42,6 +43,7 @@ function App() {
   // Initialize word statuses (0 = unread, 1 = correct, 2 = incorrect)
   React.useEffect(() => {
     setWordStatuses(new Array(words.length).fill(0))
+    setCurrentExpectedWordIndex(0)
   }, [words.length])
 
   const handlePageTransition = (page) => {
@@ -96,19 +98,27 @@ function App() {
     newRecognition.interimResults = true
     newRecognition.lang = 'en-US'
 
-    let expectedWordIndex = 0
-
     newRecognition.onresult = (event) => {
-      let spokenText = ''
+      let finalText = ''
+      let interimText = ''
+
       for (let i = event.resultIndex; i < event.results.length; i++) {
         if (event.results[i].isFinal) {
-          spokenText += event.results[i][0].transcript
+          finalText += event.results[i][0].transcript
+        } else {
+          interimText += event.results[i][0].transcript
         }
       }
 
-      if (spokenText.trim()) {
-        setTranscribedText(prev => prev + ' ' + spokenText)
-        checkWordsRealTime(spokenText)
+      // Process final results immediately for word checking
+      if (finalText.trim()) {
+        setTranscribedText(prev => prev + ' ' + finalText)
+        checkWordsRealTime(finalText)
+      }
+
+      // Also process interim results for instant feedback (more aggressive)
+      if (interimText.trim()) {
+        checkWordsRealTime(interimText)
       }
     }
 
@@ -123,6 +133,11 @@ function App() {
     newRecognition.start()
     setRecognition(newRecognition)
     setIsRecording(true)
+
+    // Reset tracking state for new session
+    setCurrentExpectedWordIndex(0)
+    setCurrentWordIndex(0)
+    setTranscribedText('')
   }
 
   const stopRecording = () => {
@@ -137,39 +152,37 @@ function App() {
     const spokenWords = cleanSpoken.split(' ').filter(w => w.trim())
 
     spokenWords.forEach(spokenWord => {
-      // Find the next unread word
-      const nextUnreadIndex = wordStatuses.findIndex(status => status === 0)
-
-      if (nextUnreadIndex !== -1) {
-        const expectedWord = words[nextUnreadIndex].toLowerCase().replace(/[.,!?;]/g, '')
-
-        // Check if spoken word matches expected word
-        if (spokenWord === expectedWord ||
-            spokenWord.includes(expectedWord) ||
-            expectedWord.includes(spokenWord)) {
-          // Mark as correct (green)
-          setWordStatuses(prev => {
-            const newStatuses = [...prev]
-            newStatuses[nextUnreadIndex] = 1
-            return newStatuses
-          })
-          setCurrentWordIndex(nextUnreadIndex + 1)
-        } else {
-          // Mark as incorrect (orange) and move on
-          setWordStatuses(prev => {
-            const newStatuses = [...prev]
-            newStatuses[nextUnreadIndex] = 2
-            return newStatuses
-          })
-          setCurrentWordIndex(nextUnreadIndex + 1)
+      // Use the current expected word index instead of searching through state
+      setCurrentExpectedWordIndex(prevIndex => {
+        if (prevIndex >= words.length) {
+          return prevIndex // Already at the end
         }
-      }
-    })
 
-    // Auto-stop when all words are checked
-    if (wordStatuses.every(status => status !== 0)) {
-      stopRecording()
-    }
+        const expectedWord = words[prevIndex].toLowerCase().replace(/[.,!?;]/g, '')
+
+        // Check if spoken word matches expected word (case-insensitive)
+        const isMatch = spokenWord === expectedWord ||
+                       spokenWord.includes(expectedWord) ||
+                       expectedWord.includes(spokenWord)
+
+        // Update word status immediately
+        setWordStatuses(prev => {
+          const newStatuses = [...prev]
+          newStatuses[prevIndex] = isMatch ? 1 : 2 // 1 = correct (green), 2 = incorrect (orange)
+          return newStatuses
+        })
+
+        // Update current word index for visual indicator
+        setCurrentWordIndex(prevIndex + 1)
+
+        // Auto-stop when all words are checked
+        if (prevIndex + 1 >= words.length) {
+          setTimeout(() => stopRecording(), 500) // Small delay to show final word status
+        }
+
+        return prevIndex + 1 // Move to next word
+      })
+    })
   }
 
   const handleRecordingToggle = () => {
@@ -328,7 +341,7 @@ function App() {
                       className={`word ${
                         wordStatuses[index] === 1 ? 'correct' :
                         wordStatuses[index] === 2 ? 'incorrect' :
-                        index === currentWordIndex ? 'current' : 'unread'
+                        index === currentExpectedWordIndex ? 'current' : 'unread'
                       }`}
                     >
                       {word}{' '}
