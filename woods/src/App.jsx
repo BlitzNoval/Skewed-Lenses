@@ -85,11 +85,31 @@ function App() {
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           chunks.push(event.data)
+
+          // Send periodic updates for real-time feedback (every 3 seconds)
+          if (chunks.length % 3 === 0) {
+            const partialBlob = new Blob(chunks, { type: 'audio/webm' })
+            const formData = new FormData()
+            formData.append('audio', partialBlob, 'partial.webm')
+
+            fetch(`${import.meta.env.VITE_API_URL}/transcribe`, {
+              method: 'POST',
+              body: formData,
+            })
+            .then(response => response.json())
+            .then(data => {
+              if (data.success && data.text.trim()) {
+                setTranscribedText(data.text)
+                processTranscribedText(data.text)
+              }
+            })
+            .catch(error => console.error('Real-time transcription error:', error))
+          }
         }
       }
 
       recorder.onstop = () => {
-        // Send complete recording to backend for transcription
+        // Send final complete recording for final transcription
         const audioBlob = new Blob(chunks, { type: 'audio/webm' })
         const formData = new FormData()
         formData.append('audio', audioBlob, 'recording.webm')
@@ -105,10 +125,10 @@ function App() {
             processTranscribedText(data.text)
           }
         })
-        .catch(error => console.error('Transcription error:', error))
+        .catch(error => console.error('Final transcription error:', error))
       }
 
-      recorder.start()
+      recorder.start(1000) // Collect data every 1 second
       setMediaRecorder(recorder)
       setIsRecording(true)
       setAudioChunks(chunks)
@@ -126,26 +146,66 @@ function App() {
     setIsRecording(false)
   }
 
-  const processTranscribedText = (newText) => {
-    // Simple word matching - compare transcribed words with expected passage
-    const spokenWords = newText.toLowerCase().split(' ')
-    const expectedWords = words.map(w => w.toLowerCase().replace(/[.,!?]/g, ''))
+  const processTranscribedText = (transcribedText) => {
+    // Clean and split both transcribed and expected text
+    const spokenWords = transcribedText.toLowerCase()
+      .replace(/[.,!?;]/g, '')
+      .split(' ')
+      .filter(word => word.trim())
 
-    spokenWords.forEach(spokenWord => {
-      if (spokenWord.trim() && currentWordIndex < expectedWords.length) {
-        const expectedWord = expectedWords[currentWordIndex]
+    const expectedWords = words.map(w => w.toLowerCase().replace(/[.,!?;]/g, ''))
 
-        // Check if spoken word matches expected word (allowing for slight variations)
-        if (spokenWord.includes(expectedWord) || expectedWord.includes(spokenWord)) {
-          setCurrentWordIndex(prev => prev + 1)
-        }
+    // Match words sequentially from the beginning
+    let matchedWords = 0
+
+    for (let i = 0; i < spokenWords.length && i < expectedWords.length; i++) {
+      const spokenWord = spokenWords[i]
+      const expectedWord = expectedWords[i]
+
+      // Check for exact match or close variations
+      if (spokenWord === expectedWord ||
+          spokenWord.includes(expectedWord) ||
+          expectedWord.includes(spokenWord) ||
+          levenshteinDistance(spokenWord, expectedWord) <= 2) {
+        matchedWords = i + 1
+      } else {
+        // Stop matching if we hit a word that doesn't match
+        break
       }
-    })
+    }
 
-    // Auto-stop when passage is complete
-    if (currentWordIndex >= words.length - 1) {
+    // Update the current word index to show progress
+    setCurrentWordIndex(matchedWords)
+
+    // Auto-stop when passage is complete or mostly complete
+    if (matchedWords >= words.length - 3) { // Allow for minor ending differences
       stopRecording()
     }
+  }
+
+  // Simple Levenshtein distance for fuzzy matching
+  const levenshteinDistance = (str1, str2) => {
+    const matrix = []
+    for (let i = 0; i <= str2.length; i++) {
+      matrix[i] = [i]
+    }
+    for (let j = 0; j <= str1.length; j++) {
+      matrix[0][j] = j
+    }
+    for (let i = 1; i <= str2.length; i++) {
+      for (let j = 1; j <= str1.length; j++) {
+        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1]
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          )
+        }
+      }
+    }
+    return matrix[str2.length][str1.length]
   }
 
   const handleRecordingToggle = () => {
