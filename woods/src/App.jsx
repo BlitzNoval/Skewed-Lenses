@@ -78,35 +78,37 @@ function App() {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' })
+      const recorder = new MediaRecorder(stream)
 
       const chunks = []
 
       recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           chunks.push(event.data)
-
-          // Send chunk to backend for real-time transcription
-          const formData = new FormData()
-          formData.append('audio', event.data, 'chunk.webm')
-          formData.append('chunk_id', Date.now().toString())
-
-          fetch('http://127.0.0.1:5001/transcribe-stream', {
-            method: 'POST',
-            body: formData,
-          })
-          .then(response => response.json())
-          .then(data => {
-            if (data.success && data.text.trim()) {
-              setTranscribedText(prev => prev + ' ' + data.text)
-              processTranscribedText(data.text)
-            }
-          })
-          .catch(error => console.error('Transcription error:', error))
         }
       }
 
-      recorder.start(1000) // Collect data every 1 second
+      recorder.onstop = () => {
+        // Send complete recording to backend for transcription
+        const audioBlob = new Blob(chunks, { type: 'audio/webm' })
+        const formData = new FormData()
+        formData.append('audio', audioBlob, 'recording.webm')
+
+        fetch('https://c5b1ad892f23.ngrok-free.app/transcribe', {
+          method: 'POST',
+          body: formData,
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success && data.text.trim()) {
+            setTranscribedText(data.text)
+            processTranscribedText(data.text)
+          }
+        })
+        .catch(error => console.error('Transcription error:', error))
+      }
+
+      recorder.start()
       setMediaRecorder(recorder)
       setIsRecording(true)
       setAudioChunks(chunks)
