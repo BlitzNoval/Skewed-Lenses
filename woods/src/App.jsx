@@ -94,7 +94,7 @@ function App() {
         const formData = new FormData()
         formData.append('audio', audioBlob, 'recording.webm')
 
-        fetch('https://c5b1ad892f23.ngrok-free.app/transcribe', {
+        fetch(`${import.meta.env.VITE_API_URL}/transcribe`, {
           method: 'POST',
           body: formData,
         })

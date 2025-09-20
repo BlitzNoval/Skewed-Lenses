@@ -232,5 +232,8 @@ def root():
 
 if __name__ == '__main__':
     print("Starting Flask server...")
+    print("Pre-loading Whisper model...")
+    get_whisper_model()  # Pre-load the model
+    print("Model ready!")
     port = int(os.getenv('PORT', 5001))
     app.run(host='0.0.0.0', port=port, debug=False)
