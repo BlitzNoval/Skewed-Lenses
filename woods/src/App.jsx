@@ -26,6 +26,11 @@ function App() {
   const [recognition, setRecognition] = useState(null)
   const [wordStatuses, setWordStatuses] = useState([])
   const [currentExpectedWordIndex, setCurrentExpectedWordIndex] = useState(0)
+  const [sentences, setSentences] = useState([])
+  const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0)
+  const [sentenceWordStatuses, setSentenceWordStatuses] = useState([])
+  const [totalCorrect, setTotalCorrect] = useState(0)
+  const [totalWords, setTotalWords] = useState(0)
 
   // DIBELS passages
   const passages = [
@@ -40,11 +45,35 @@ function App() {
   const passage = passages[selectedPassage]
   const words = passage.split(' ')
 
-  // Initialize word statuses (0 = unread, 1 = correct, 2 = incorrect)
+  // Function to break passage into 5-word sentences (remove punctuation)
+  const createSentences = (passageText) => {
+    const cleanedText = passageText.replace(/[.,!?;]/g, '')
+    const allWords = cleanedText.split(' ').filter(w => w.trim())
+    const sentenceChunks = []
+    for (let i = 0; i < allWords.length; i += 5) {
+      const chunk = allWords.slice(i, i + 5)
+      if (chunk.length > 0) {
+        sentenceChunks.push(chunk)
+      }
+    }
+    return sentenceChunks
+  }
+
+  // Initialize word statuses and sentences (0 = unread, 1 = correct, 2 = incorrect)
   React.useEffect(() => {
     setWordStatuses(new Array(words.length).fill(0))
     setCurrentExpectedWordIndex(0)
-  }, [words.length])
+
+    const sentenceChunks = createSentences(passage)
+    setSentences(sentenceChunks)
+    setCurrentSentenceIndex(0)
+    setSentenceWordStatuses(new Array(5).fill(0)) // Max 5 words per sentence
+    setTotalCorrect(0)
+
+    // Calculate total words without punctuation
+    const cleanedWords = passage.replace(/[.,!?;]/g, '').split(' ').filter(w => w.trim())
+    setTotalWords(cleanedWords.length)
+  }, [words.length, passage])
 
   const handlePageTransition = (page) => {
     setIsTransitioning(true)
@@ -86,101 +115,134 @@ function App() {
   }
 
   const startRecording = () => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      alert('Speech recognition not supported in this browser')
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      alert('Media recording not supported in this browser')
       return
     }
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    const newRecognition = new SpeechRecognition()
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then(stream => {
+        const newMediaRecorder = new MediaRecorder(stream, {
+          mimeType: 'audio/webm;codecs=opus'
+        })
 
-    newRecognition.continuous = true
-    newRecognition.interimResults = true
-    newRecognition.lang = 'en-US'
+        const chunks = []
 
-    newRecognition.onresult = (event) => {
-      let finalText = ''
-      let interimText = ''
-
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          finalText += event.results[i][0].transcript
-        } else {
-          interimText += event.results[i][0].transcript
+        newMediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            chunks.push(event.data)
+          }
         }
-      }
 
-      // Process final results immediately for word checking
-      if (finalText.trim()) {
-        setTranscribedText(prev => prev + ' ' + finalText)
-        checkWordsRealTime(finalText)
-      }
+        newMediaRecorder.onstop = () => {
+          const audioBlob = new Blob(chunks, { type: 'audio/webm' })
+          transcribeWithWhisper(audioBlob)
+          stream.getTracks().forEach(track => track.stop())
+        }
 
-      // Also process interim results for instant feedback (more aggressive)
-      if (interimText.trim()) {
-        checkWordsRealTime(interimText)
-      }
-    }
+        // Record for the entire sentence (user will stop manually)
+        newMediaRecorder.start()
+        setMediaRecorder(newMediaRecorder)
+        setIsRecording(true)
 
-    newRecognition.onerror = (event) => {
-      console.error('Speech recognition error:', event.error)
-    }
-
-    newRecognition.onend = () => {
-      setIsRecording(false)
-    }
-
-    newRecognition.start()
-    setRecognition(newRecognition)
-    setIsRecording(true)
-
-    // Reset tracking state for new session
-    setCurrentExpectedWordIndex(0)
-    setCurrentWordIndex(0)
-    setTranscribedText('')
+        // Reset tracking state for new sentence
+        setCurrentExpectedWordIndex(0)
+        setCurrentWordIndex(0)
+        setTranscribedText('')
+        setSentenceWordStatuses(new Array(5).fill(0))
+      })
+      .catch(error => {
+        console.error('Error accessing microphone:', error)
+        alert('Error accessing microphone')
+      })
   }
 
   const stopRecording = () => {
-    if (recognition) {
-      recognition.stop()
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      mediaRecorder.stop()
     }
     setIsRecording(false)
+  }
+
+  const transcribeWithWhisper = async (audioBlob) => {
+    try {
+      setIsTranscribing(true)
+
+      const formData = new FormData()
+      formData.append('audio', audioBlob, 'audio.webm')
+
+      const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5001'
+
+      const response = await fetch(`${API_URL}/transcribe`, {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (data.transcription) {
+        setTranscribedText(data.transcription)
+        checkWordsRealTime(data.transcription)
+      } else {
+        throw new Error('No transcription received')
+      }
+    } catch (error) {
+      console.error('Transcription error:', error)
+      alert('Transcription failed. Make sure the backend is running.')
+    } finally {
+      setIsTranscribing(false)
+    }
   }
 
   const checkWordsRealTime = (spokenText) => {
     const cleanSpoken = spokenText.toLowerCase().replace(/[.,!?;]/g, '').trim()
     const spokenWords = cleanSpoken.split(' ').filter(w => w.trim())
 
+    if (currentSentenceIndex >= sentences.length) return
+
+    const currentSentence = sentences[currentSentenceIndex]
+
     spokenWords.forEach(spokenWord => {
-      // Use the current expected word index instead of searching through state
       setCurrentExpectedWordIndex(prevIndex => {
-        if (prevIndex >= words.length) {
-          return prevIndex // Already at the end
+        if (prevIndex >= currentSentence.length) {
+          return prevIndex // Already at the end of current sentence
         }
 
-        const expectedWord = words[prevIndex].toLowerCase().replace(/[.,!?;]/g, '')
+        const expectedWord = currentSentence[prevIndex].toLowerCase().replace(/[.,!?;]/g, '')
 
-        // Check if spoken word matches expected word (case-insensitive)
+        // More flexible word matching for speech recognition variations
         const isMatch = spokenWord === expectedWord ||
                        spokenWord.includes(expectedWord) ||
-                       expectedWord.includes(spokenWord)
+                       expectedWord.includes(spokenWord) ||
+                       // Handle common speech recognition variations
+                       (expectedWord.length > 3 && spokenWord.length > 3 &&
+                        (expectedWord.startsWith(spokenWord.slice(0, 3)) ||
+                         spokenWord.startsWith(expectedWord.slice(0, 3))))
 
-        // Update word status immediately
-        setWordStatuses(prev => {
+        // Update sentence word status immediately
+        setSentenceWordStatuses(prev => {
           const newStatuses = [...prev]
           newStatuses[prevIndex] = isMatch ? 1 : 2 // 1 = correct (green), 2 = incorrect (orange)
           return newStatuses
         })
 
-        // Update current word index for visual indicator
-        setCurrentWordIndex(prevIndex + 1)
-
-        // Auto-stop when all words are checked
-        if (prevIndex + 1 >= words.length) {
-          setTimeout(() => stopRecording(), 500) // Small delay to show final word status
+        // Update correct count only
+        if (isMatch) {
+          setTotalCorrect(prev => prev + 1)
         }
 
-        return prevIndex + 1 // Move to next word
+        // Auto-complete sentence when all words are checked
+        if (prevIndex + 1 >= currentSentence.length) {
+          setTimeout(() => {
+            stopRecording()
+          }, 500) // Small delay to show final word status
+        }
+
+        return prevIndex + 1 // Move to next expected word
       })
     })
   }
@@ -190,6 +252,15 @@ function App() {
       stopRecording()
     } else {
       startRecording()
+    }
+  }
+
+  const moveToNextSentence = () => {
+    if (currentSentenceIndex < sentences.length - 1) {
+      setCurrentSentenceIndex(prev => prev + 1)
+      setCurrentExpectedWordIndex(0)
+      setSentenceWordStatuses(new Array(5).fill(0))
+      setTranscribedText('')
     }
   }
 
@@ -323,39 +394,85 @@ function App() {
         <div className="recording-interface">
           <div className="recording-container">
             <div className="left-section">
+              <div className="score-display">
+                Score: {totalCorrect}/{totalWords}
+              </div>
+
               <button
                 className={`start-recording-btn ${isRecording ? 'recording' : ''}`}
                 onClick={handleRecordingToggle}
+                disabled={isTranscribing}
               >
-                {isRecording ? 'Recording...' : 'Start'}
+                {isTranscribing ? 'Transcribing...' : isRecording ? 'Stop Recording' : 'Start Recording'}
               </button>
             </div>
 
             <div className="right-section">
-              <div className="passage-container">
-                <h3>Read the following passage aloud:</h3>
-                <div className="passage-text">
-                  {words.map((word, index) => (
-                    <span
-                      key={index}
-                      className={`word ${
-                        wordStatuses[index] === 1 ? 'correct' :
-                        wordStatuses[index] === 2 ? 'incorrect' :
-                        index === currentExpectedWordIndex ? 'current' : 'unread'
-                      }`}
-                    >
-                      {word}{' '}
-                    </span>
-                  ))}
-                </div>
+              <div className="casino-container">
+                {/* Previous sentence (if exists) */}
+                {currentSentenceIndex > 0 && (
+                  <div className="sentence-slot previous">
+                    <div className="word-container">
+                      {sentences[currentSentenceIndex - 1].map((word, index) => (
+                        <span key={index} className="casino-word">
+                          {word}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
-                {transcribedText && (
-                  <div className="transcription-debug">
-                    <h4>Transcribed: </h4>
-                    <p>{transcribedText}</p>
+                {/* Current sentence */}
+                {sentences[currentSentenceIndex] && (
+                  <div className="sentence-slot current">
+                    <div className="word-container">
+                      {sentences[currentSentenceIndex].map((word, index) => (
+                        <span
+                          key={index}
+                          className={`casino-word ${
+                            sentenceWordStatuses[index] === 1 ? 'correct' :
+                            sentenceWordStatuses[index] === 2 ? 'incorrect' :
+                            index === currentExpectedWordIndex ? 'current' : ''
+                          }`}
+                        >
+                          {word}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Next sentence (if exists) */}
+                {currentSentenceIndex < sentences.length - 1 && (
+                  <div className="sentence-slot next">
+                    <div className="word-container">
+                      {sentences[currentSentenceIndex + 1].map((word, index) => (
+                        <span key={index} className="casino-word">
+                          {word}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
+
+              <div className="sentence-controls">
+                <button
+                  className="next-sentence-btn"
+                  onClick={moveToNextSentence}
+                  disabled={currentSentenceIndex >= sentences.length - 1 ||
+                           sentenceWordStatuses.slice(0, sentences[currentSentenceIndex]?.length || 0).includes(0)}
+                >
+                  Next Sentence
+                </button>
+              </div>
+
+              {transcribedText && (
+                <div className="transcription-debug">
+                  <h4>Transcribed: </h4>
+                  <p>{transcribedText}</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
