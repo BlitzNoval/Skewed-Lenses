@@ -23,6 +23,8 @@ function App() {
   const [audioChunks, setAudioChunks] = useState([])
   const [transcribedText, setTranscribedText] = useState('')
   const [isTranscribing, setIsTranscribing] = useState(false)
+  const [recognition, setRecognition] = useState(null)
+  const [wordStatuses, setWordStatuses] = useState([])
 
   // DIBELS passages
   const passages = [
@@ -36,6 +38,11 @@ function App() {
   const [selectedPassage] = useState(() => Math.floor(Math.random() * passages.length))
   const passage = passages[selectedPassage]
   const words = passage.split(' ')
+
+  // Initialize word statuses (0 = unread, 1 = correct, 2 = incorrect)
+  React.useEffect(() => {
+    setWordStatuses(new Array(words.length).fill(0))
+  }, [words.length])
 
   const handlePageTransition = (page) => {
     setIsTransitioning(true)
@@ -76,148 +83,93 @@ function App() {
     }, 800)
   }
 
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const recorder = new MediaRecorder(stream)
+  const startRecording = () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      alert('Speech recognition not supported in this browser')
+      return
+    }
 
-      const chunks = []
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    const newRecognition = new SpeechRecognition()
 
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunks.push(event.data)
+    newRecognition.continuous = true
+    newRecognition.interimResults = true
+    newRecognition.lang = 'en-US'
 
-          // Send updates every 2 seconds, but only if not already transcribing
-          if (chunks.length % 2 === 0 && !isTranscribing) {
-            setIsTranscribing(true)
+    let expectedWordIndex = 0
 
-            const partialBlob = new Blob(chunks, { type: 'audio/webm' })
-
-            // Only send if blob is substantial enough (avoid tiny chunks)
-            if (partialBlob.size > 50000) { // 50KB minimum
-              const formData = new FormData()
-              formData.append('audio', partialBlob, 'partial.webm')
-
-              fetch(`${import.meta.env.VITE_API_URL}/transcribe`, {
-                method: 'POST',
-                body: formData,
-              })
-              .then(response => response.json())
-              .then(data => {
-                if (data.success && data.text.trim()) {
-                  setTranscribedText(data.text)
-                  processTranscribedText(data.text)
-                }
-              })
-              .catch(error => console.error('Real-time transcription error:', error))
-              .finally(() => {
-                setIsTranscribing(false)
-              })
-            } else {
-              setIsTranscribing(false)
-            }
-          }
+    newRecognition.onresult = (event) => {
+      let spokenText = ''
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          spokenText += event.results[i][0].transcript
         }
       }
 
-      recorder.onstop = () => {
-        // Send final complete recording for final transcription
-        const audioBlob = new Blob(chunks, { type: 'audio/webm' })
-        const formData = new FormData()
-        formData.append('audio', audioBlob, 'recording.webm')
-
-        fetch(`${import.meta.env.VITE_API_URL}/transcribe`, {
-          method: 'POST',
-          body: formData,
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success && data.text.trim()) {
-            setTranscribedText(data.text)
-            processTranscribedText(data.text)
-          }
-        })
-        .catch(error => console.error('Final transcription error:', error))
+      if (spokenText.trim()) {
+        setTranscribedText(prev => prev + ' ' + spokenText)
+        checkWordsRealTime(spokenText)
       }
-
-      recorder.start(1000) // Collect data every 1 second
-      setMediaRecorder(recorder)
-      setIsRecording(true)
-      setAudioChunks(chunks)
-
-    } catch (error) {
-      console.error('Error starting recording:', error)
     }
+
+    newRecognition.onerror = (event) => {
+      console.error('Speech recognition error:', event.error)
+    }
+
+    newRecognition.onend = () => {
+      setIsRecording(false)
+    }
+
+    newRecognition.start()
+    setRecognition(newRecognition)
+    setIsRecording(true)
   }
 
   const stopRecording = () => {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-      mediaRecorder.stop()
-      mediaRecorder.stream.getTracks().forEach(track => track.stop())
+    if (recognition) {
+      recognition.stop()
     }
     setIsRecording(false)
   }
 
-  const processTranscribedText = (transcribedText) => {
-    // Clean and split both transcribed and expected text
-    const spokenWords = transcribedText.toLowerCase()
-      .replace(/[.,!?;]/g, '')
-      .split(' ')
-      .filter(word => word.trim())
+  const checkWordsRealTime = (spokenText) => {
+    const cleanSpoken = spokenText.toLowerCase().replace(/[.,!?;]/g, '').trim()
+    const spokenWords = cleanSpoken.split(' ').filter(w => w.trim())
 
-    const expectedWords = words.map(w => w.toLowerCase().replace(/[.,!?;]/g, ''))
+    spokenWords.forEach(spokenWord => {
+      // Find the next unread word
+      const nextUnreadIndex = wordStatuses.findIndex(status => status === 0)
 
-    // Match words sequentially from the beginning
-    let matchedWords = 0
+      if (nextUnreadIndex !== -1) {
+        const expectedWord = words[nextUnreadIndex].toLowerCase().replace(/[.,!?;]/g, '')
 
-    for (let i = 0; i < spokenWords.length && i < expectedWords.length; i++) {
-      const spokenWord = spokenWords[i]
-      const expectedWord = expectedWords[i]
-
-      // Check for exact match or close variations
-      if (spokenWord === expectedWord ||
-          spokenWord.includes(expectedWord) ||
-          expectedWord.includes(spokenWord) ||
-          levenshteinDistance(spokenWord, expectedWord) <= 2) {
-        matchedWords = i + 1
-      } else {
-        // Stop matching if we hit a word that doesn't match
-        break
-      }
-    }
-
-    // Update the current word index to show progress
-    setCurrentWordIndex(matchedWords)
-
-    // Auto-stop when passage is complete or mostly complete
-    if (matchedWords >= words.length - 3) { // Allow for minor ending differences
-      stopRecording()
-    }
-  }
-
-  // Simple Levenshtein distance for fuzzy matching
-  const levenshteinDistance = (str1, str2) => {
-    const matrix = []
-    for (let i = 0; i <= str2.length; i++) {
-      matrix[i] = [i]
-    }
-    for (let j = 0; j <= str1.length; j++) {
-      matrix[0][j] = j
-    }
-    for (let i = 1; i <= str2.length; i++) {
-      for (let j = 1; j <= str1.length; j++) {
-        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-          matrix[i][j] = matrix[i - 1][j - 1]
+        // Check if spoken word matches expected word
+        if (spokenWord === expectedWord ||
+            spokenWord.includes(expectedWord) ||
+            expectedWord.includes(spokenWord)) {
+          // Mark as correct (green)
+          setWordStatuses(prev => {
+            const newStatuses = [...prev]
+            newStatuses[nextUnreadIndex] = 1
+            return newStatuses
+          })
+          setCurrentWordIndex(nextUnreadIndex + 1)
         } else {
-          matrix[i][j] = Math.min(
-            matrix[i - 1][j - 1] + 1,
-            matrix[i][j - 1] + 1,
-            matrix[i - 1][j] + 1
-          )
+          // Mark as incorrect (orange) and move on
+          setWordStatuses(prev => {
+            const newStatuses = [...prev]
+            newStatuses[nextUnreadIndex] = 2
+            return newStatuses
+          })
+          setCurrentWordIndex(nextUnreadIndex + 1)
         }
       }
+    })
+
+    // Auto-stop when all words are checked
+    if (wordStatuses.every(status => status !== 0)) {
+      stopRecording()
     }
-    return matrix[str2.length][str1.length]
   }
 
   const handleRecordingToggle = () => {
@@ -374,7 +326,8 @@ function App() {
                     <span
                       key={index}
                       className={`word ${
-                        index < currentWordIndex ? 'correct' :
+                        wordStatuses[index] === 1 ? 'correct' :
+                        wordStatuses[index] === 2 ? 'incorrect' :
                         index === currentWordIndex ? 'current' : 'unread'
                       }`}
                     >
