@@ -619,7 +619,7 @@ function App() {
               </button>
             </div>
             <button
-              className="back-button"
+              className="persistent-home-btn"
               onClick={() => handlePageTransition('home')}
             >
               ← HOME
@@ -630,12 +630,12 @@ function App() {
 
       {showRecordingInterface && (
         <div className="test-interface">
-          {/* Persistent Home Button */}
+          {/* Persistent Back Button */}
           <button
             className="persistent-home-btn"
             onClick={() => handlePageTransition('begin')}
           >
-            ← HOME
+            ← BACK
           </button>
 
           {/* Begin Button - Only visible initially */}
