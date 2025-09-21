@@ -1061,6 +1061,7 @@
   align-items: center;
   justify-content: center;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .test-interface::before {
@@ -1137,7 +1138,7 @@
 }
 
 .test-word.rolling-in {
-  animation: rollInWord 0.6s ease-out forwards;
+  animation: rollInWord 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 }
 
 @keyframes rollOutWord {
@@ -1207,6 +1208,32 @@
   box-shadow: 4px 8px 0px rgba(0, 0, 0, 0.4);
 }
 
+.begin-benchmark-btn {
+  padding: 1.3rem 3rem;
+  border: none;
+  border-radius: 30px;
+  font-family: 'SF Pro Display', 'Helvetica Neue', 'Segoe UI', 'Arial', sans-serif;
+  font-weight: 600;
+  font-size: 1.3rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-transform: uppercase;
+  -webkit-font-smoothing: antialiased;
+  background: #1a1a1a;
+  color: #ffffff;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 100;
+}
+
+.begin-benchmark-btn:hover {
+  transform: translate(-50%, -50%) translateY(-2px);
+  box-shadow: 4px 8px 0px rgba(0, 0, 0, 0.4);
+}
+
 .countdown-container {
   position: relative;
   width: 120px;
@@ -1232,7 +1259,7 @@
   border-radius: 50%;
   background: conic-gradient(#000000 0deg, #000000 var(--progress, 360deg), transparent var(--progress, 360deg));
   mask: radial-gradient(circle, transparent 50px, black 54px);
-  transition: all 1s ease;
+  transition: all 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .countdown-number {
@@ -1241,6 +1268,157 @@
   font-weight: 600;
   color: #000000;
   z-index: 10;
+}
+
+.directional-countdown {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'SF Pro Display', 'Helvetica Neue', 'Segoe UI', 'Arial', sans-serif;
+  font-size: 6rem;
+  font-weight: 600;
+  color: #000000;
+  z-index: 100;
+}
+
+.countdown-5 {
+  animation: appear5 0.5s ease-out forwards;
+}
+
+.countdown-4 {
+  animation: fromTop 0.5s ease-out forwards;
+}
+
+.countdown-3 {
+  animation: fromLeft 0.5s ease-out forwards;
+}
+
+.countdown-2 {
+  animation: fromRight 0.5s ease-out forwards;
+}
+
+.countdown-1 {
+  animation: fromBottom 0.5s ease-out forwards;
+}
+
+.countdown-exit-5 {
+  animation: toTop 0.3s ease-in forwards;
+}
+
+.countdown-exit-4 {
+  animation: toTop 0.3s ease-in forwards;
+}
+
+.countdown-exit-3 {
+  animation: toLeft 0.3s ease-in forwards;
+}
+
+.countdown-exit-2 {
+  animation: toRight 0.3s ease-in forwards;
+}
+
+.countdown-exit-1 {
+  animation: toBottom 0.3s ease-in forwards;
+}
+
+@keyframes appear5 {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes fromTop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -200px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes fromLeft {
+  from {
+    opacity: 0;
+    transform: translate(-200px, -50%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes fromRight {
+  from {
+    opacity: 0;
+    transform: translate(150px, -50%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes fromBottom {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 150px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes toTop {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -200px);
+  }
+}
+
+@keyframes toLeft {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-200px, -50%);
+  }
+}
+
+@keyframes toRight {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  to {
+    opacity: 0;
+    transform: translate(150px, -50%);
+  }
+}
+
+@keyframes toBottom {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, 150px);
+  }
 }
 
 .countdown-container.fly-out {
@@ -1263,12 +1441,68 @@
   font-size: 1.5rem;
   font-weight: 400;
   color: rgba(0, 0, 0, 0.7);
-  animation: fadeIn 0.5s ease-in forwards;
-  text-align: center;
+  position: absolute;
+  left: 80px;
+  top: 50%;
+  transform: translateY(-50%);
+  animation: scoreSlideIn 0.8s ease-out forwards;
+  white-space: nowrap;
+}
+
+.test-layout {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 60px;
+}
+
+.words-section-positioned {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  align-items: center;
+  justify-content: center;
+  font-family: 'SF Pro Display', 'Helvetica Neue', 'Segoe UI', 'Arial', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 400;
+  max-width: 60%;
+  animation: wordsSlideIn 0.8s ease-out 0.4s forwards;
+  opacity: 0;
+}
+
+@keyframes scoreSlideIn {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(2);
+    left: 50%;
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    left: 50%;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+    left: 80px;
+  }
+}
+
+@keyframes wordsSlideIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) translateX(100px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
 }
 
 @keyframes fadeIn {

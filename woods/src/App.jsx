@@ -37,6 +37,8 @@ function App() {
   const [rollingWords, setRollingWords] = useState([])
   const [countdownFlyOut, setCountdownFlyOut] = useState(false)
   const [whisperTranscriptions, setWhisperTranscriptions] = useState([])
+  const [showBeginButton, setShowBeginButton] = useState(true)
+  const [countdownExiting, setCountdownExiting] = useState(false)
 
   // DIBELS passages
   const passages = [
@@ -223,7 +225,11 @@ function App() {
     newRecognition.onend = () => {
       // Auto-restart if still recording
       if (isRecording) {
-        setTimeout(() => newRecognition.start(), 100)
+        setTimeout(() => {
+          if (isRecording) { // Double check still recording
+            newRecognition.start()
+          }
+        }, 100)
       }
     }
 
@@ -232,6 +238,8 @@ function App() {
   }
 
   const stopRecording = () => {
+    setIsRecording(false)
+
     // Stop MediaRecorder for Whisper
     if (mediaRecorder && mediaRecorder.state === 'recording') {
       mediaRecorder.stop()
@@ -240,9 +248,8 @@ function App() {
     // Stop Web Speech API
     if (recognition) {
       recognition.stop()
+      setRecognition(null) // Clear recognition reference
     }
-
-    setIsRecording(false)
   }
 
   const transcribeWithWhisper = async (audioBlob) => {
@@ -367,8 +374,12 @@ function App() {
 
   const moveToNextSentence = () => {
     if (currentSentenceIndex < sentences.length - 1) {
+      const currentSentence = sentences[currentSentenceIndex]
+      const nextSentenceIndex = currentSentenceIndex + 1
+      const nextSentence = sentences[nextSentenceIndex]
+
       // First, trigger roll-out animation for current words
-      sentences[currentSentenceIndex].forEach((word, index) => {
+      currentSentence.forEach((word, index) => {
         setTimeout(() => {
           setRollingWords(prev => [...prev, `out-${currentSentenceIndex}-${index}`])
         }, index * 100) // 100ms stagger for roll-out
@@ -376,30 +387,32 @@ function App() {
 
       // After roll-out completes, switch to next sentence and roll in
       setTimeout(() => {
-        setCurrentSentenceIndex(prev => prev + 1)
+        setCurrentSentenceIndex(nextSentenceIndex)
         setCurrentExpectedWordIndex(0)
         setSentenceWordStatuses(new Array(5).fill(0))
         setTranscribedText('')
 
-        // Clear roll-out animations
-        setRollingWords([])
+        // Wait a bit before starting roll-in to prevent flicker
+        setTimeout(() => {
+          // Clear any existing animations
+          setRollingWords([])
 
-        // Trigger roll-in animation for next sentence
-        const nextSentence = sentences[currentSentenceIndex + 1]
-        if (nextSentence) {
-          nextSentence.forEach((word, index) => {
+          // Trigger roll-in animation for next sentence
+          if (nextSentence) {
+            nextSentence.forEach((word, index) => {
+              setTimeout(() => {
+                setRollingWords(prev => [...prev, `in-${nextSentenceIndex}-${index}`])
+              }, index * 100) // 100ms stagger for roll-in
+            })
+
+            // Clean up roll-in animations and start recording
             setTimeout(() => {
-              setRollingWords(prev => [...prev, `in-${currentSentenceIndex + 1}-${index}`])
-            }, index * 100) // 100ms stagger for roll-in
-          })
-
-          // Clean up roll-in animations and start recording
-          setTimeout(() => {
-            setRollingWords([])
-            startRecording()
-          }, nextSentence.length * 100 + 600)
-        }
-      }, sentences[currentSentenceIndex].length * 100 + 600) // Wait for roll-out to complete
+              setRollingWords([])
+              startRecording()
+            }, nextSentence.length * 100 + 400)
+          }
+        }, 200) // Small delay to prevent flicker
+      }, currentSentence.length * 100 + 600) // Wait for roll-out to complete
 
     } else {
       // Test complete
@@ -416,6 +429,7 @@ function App() {
   }
 
   const startTest = () => {
+    setShowBeginButton(false)
     setShowCountdown(true)
     setCountdownNumber(5)
 
@@ -423,19 +437,28 @@ function App() {
       setCountdownNumber(prev => {
         if (prev <= 1) {
           clearInterval(countdownInterval)
-          // Trigger fly-out animation
-          setCountdownFlyOut(true)
+
+          // Start exit animation
+          setCountdownExiting(true)
 
           setTimeout(() => {
             setShowCountdown(false)
-            setCountdownFlyOut(false)
+            setCountdownExiting(false)
             setTestStarted(true)
             startRecording()
-          }, 500) // Wait for fly-out animation
+          }, 300) // Wait for exit animation
 
           return 0
+        } else {
+          // Trigger exit animation for current number
+          setCountdownExiting(true)
+
+          setTimeout(() => {
+            setCountdownExiting(false)
+          }, 300)
+
+          return prev - 1
         }
-        return prev - 1
       })
     }, 1000)
   }
@@ -581,54 +604,58 @@ function App() {
 
       {showRecordingInterface && (
         <div className="test-interface">
-          <div className="test-content">
-            <div className="words-section">
-              {sentences[currentSentenceIndex] && sentences[currentSentenceIndex].map((word, index) => {
-                const rollOutKey = `out-${currentSentenceIndex}-${index}`
-                const rollInKey = `in-${currentSentenceIndex}-${index}`
-                const isRollingOut = rollingWords.includes(rollOutKey)
-                const isRollingIn = rollingWords.includes(rollInKey)
+          {/* Begin Button - Only visible initially */}
+          {showBeginButton && (
+            <button className="begin-benchmark-btn" onClick={startTest}>
+              Begin Benchmark
+            </button>
+          )}
 
-                return (
-                  <span
-                    key={`${currentSentenceIndex}-${index}`}
-                    className={`test-word ${
-                      sentenceWordStatuses[index] === 1 ? 'correct' :
-                      sentenceWordStatuses[index] === 2 ? 'incorrect' :
-                      index === currentExpectedWordIndex ? 'current' : 'unread'
-                    } ${isRollingOut ? 'rolling-out' : ''} ${isRollingIn ? 'rolling-in' : ''}`}
-                  >
-                    {word}
-                  </span>
-                )
-              })}
+          {/* Directional Countdown */}
+          {showCountdown && (
+            <div
+              className={`directional-countdown countdown-${countdownNumber} ${
+                countdownExiting ? `countdown-exit-${countdownNumber}` : ''
+              }`}
+            >
+              {countdownNumber}
             </div>
+          )}
 
-            <div className="score-section">
-              {testStarted ? (
-                <div className="fluency-score-text">
-                  Fluency Score: {totalCorrect}/{totalWords}
-                </div>
-              ) : showCountdown ? (
-                <div className={`countdown-container ${countdownFlyOut ? 'fly-out' : ''}`}>
-                  <div className="countdown-circle-bg"></div>
-                  <div
-                    className="countdown-progress-ring"
-                    style={{
-                      '--progress': `${((5 - countdownNumber) / 5) * 360}deg`
-                    }}
-                  ></div>
-                  <div className="countdown-number">{countdownNumber}</div>
-                </div>
-              ) : (
-                <button className="start-test-btn" onClick={startTest}>
-                  Start Test
-                </button>
-              )}
+          {/* Test Layout - Only visible during test */}
+          {testStarted && (
+            <div className="test-layout">
+              {/* Fluency Score - Positioned on left */}
+              <div className="fluency-score-text">
+                Fluency Score: {totalCorrect}/{totalWords}
+              </div>
+
+              {/* Words Section - Positioned in center */}
+              <div className="words-section-positioned">
+                {sentences[currentSentenceIndex] && sentences[currentSentenceIndex].map((word, index) => {
+                  const rollOutKey = `out-${currentSentenceIndex}-${index}`
+                  const rollInKey = `in-${currentSentenceIndex}-${index}`
+                  const isRollingOut = rollingWords.includes(rollOutKey)
+                  const isRollingIn = rollingWords.includes(rollInKey)
+
+                  return (
+                    <span
+                      key={`${currentSentenceIndex}-${index}`}
+                      className={`test-word ${
+                        sentenceWordStatuses[index] === 1 ? 'correct' :
+                        sentenceWordStatuses[index] === 2 ? 'incorrect' :
+                        index === currentExpectedWordIndex ? 'current' : 'unread'
+                      } ${isRollingOut ? 'rolling-out' : ''} ${isRollingIn ? 'rolling-in' : ''}`}
+                    >
+                      {word}
+                    </span>
+                  )
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
-
+          {/* Debug Transcription */}
           {transcribedText && (
             <div className="transcription-debug" style={{position: 'absolute', bottom: '20px', left: '20px'}}>
               <h4>Transcribed: </h4>
