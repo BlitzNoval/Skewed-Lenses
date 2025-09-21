@@ -36,6 +36,7 @@ function App() {
   const [testStarted, setTestStarted] = useState(false)
   const [rollingWords, setRollingWords] = useState([])
   const [countdownFlyOut, setCountdownFlyOut] = useState(false)
+  const [whisperTranscriptions, setWhisperTranscriptions] = useState([])
 
   // DIBELS passages
   const passages = [
@@ -121,12 +122,16 @@ function App() {
 
   const startRecording = () => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      alert('Media recording not supported in this browser')
+      alert('Recording not supported in this browser')
       return
     }
 
     navigator.mediaDevices.getUserMedia({ audio: true })
       .then(stream => {
+        // Start Web Speech API for instant feedback
+        startWebSpeechRecognition()
+
+        // Start MediaRecorder for Whisper accuracy verification
         const newMediaRecorder = new MediaRecorder(stream, {
           mimeType: 'audio/webm;codecs=opus'
         })
@@ -141,11 +146,10 @@ function App() {
 
         newMediaRecorder.onstop = () => {
           const audioBlob = new Blob(chunks, { type: 'audio/webm' })
-          transcribeWithWhisper(audioBlob)
+          transcribeWithWhisper(audioBlob) // Background verification
           stream.getTracks().forEach(track => track.stop())
         }
 
-        // Record for the entire sentence (user will stop manually)
         newMediaRecorder.start()
         setMediaRecorder(newMediaRecorder)
         setIsRecording(true)
@@ -162,10 +166,59 @@ function App() {
       })
   }
 
+  const startWebSpeechRecognition = () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      console.warn('Web Speech API not supported, using Whisper only')
+      return
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    const newRecognition = new SpeechRecognition()
+
+    newRecognition.continuous = true
+    newRecognition.interimResults = true
+    newRecognition.lang = 'en-US'
+
+    newRecognition.onresult = (event) => {
+      let finalText = ''
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          finalText += event.results[i][0].transcript
+        }
+      }
+
+      // Process for instant visual feedback
+      if (finalText.trim()) {
+        checkWordsRealTime(finalText)
+      }
+    }
+
+    newRecognition.onerror = (event) => {
+      console.error('Speech recognition error:', event.error)
+    }
+
+    newRecognition.onend = () => {
+      // Auto-restart if still recording
+      if (isRecording) {
+        setTimeout(() => newRecognition.start(), 100)
+      }
+    }
+
+    newRecognition.start()
+    setRecognition(newRecognition)
+  }
+
   const stopRecording = () => {
+    // Stop MediaRecorder for Whisper
     if (mediaRecorder && mediaRecorder.state === 'recording') {
       mediaRecorder.stop()
     }
+
+    // Stop Web Speech API
+    if (recognition) {
+      recognition.stop()
+    }
+
     setIsRecording(false)
   }
 
@@ -192,11 +245,33 @@ function App() {
 
       // Backend returns "text" not "transcription"
       if (data.text) {
-        setTranscribedText(data.text)
-        checkWordsRealTime(data.text)
+        // Save Whisper transcription for current sentence (hidden from user)
+        setWhisperTranscriptions(prev => {
+          const newTranscriptions = [...prev]
+          newTranscriptions[currentSentenceIndex] = {
+            sentenceIndex: currentSentenceIndex,
+            expectedWords: sentences[currentSentenceIndex],
+            whisperTranscription: data.text,
+            timestamp: new Date().toISOString()
+          }
+          return newTranscriptions
+        })
+
+        console.log('Whisper transcription saved for sentence', currentSentenceIndex, ':', data.text)
       } else if (data.transcription) {
-        setTranscribedText(data.transcription)
-        checkWordsRealTime(data.transcription)
+        // Save Whisper transcription for current sentence (hidden from user)
+        setWhisperTranscriptions(prev => {
+          const newTranscriptions = [...prev]
+          newTranscriptions[currentSentenceIndex] = {
+            sentenceIndex: currentSentenceIndex,
+            expectedWords: sentences[currentSentenceIndex],
+            whisperTranscription: data.transcription,
+            timestamp: new Date().toISOString()
+          }
+          return newTranscriptions
+        })
+
+        console.log('Whisper transcription saved for sentence', currentSentenceIndex, ':', data.transcription)
       } else {
         console.error('Unexpected response format:', data)
         throw new Error('No transcription received')
@@ -282,6 +357,12 @@ function App() {
       // Test complete
       setTestStarted(false)
       setIsRecording(false)
+
+      // Log all Whisper transcriptions for data collection
+      console.log('=== COMPLETE WHISPER TRANSCRIPTION DATA ===')
+      console.log('Final Whisper Data:', whisperTranscriptions)
+      console.log('Total Sentences:', whisperTranscriptions.length)
+
       alert(`Test Complete! Score: ${totalCorrect}/${totalWords}`)
     }
   }
@@ -313,6 +394,19 @@ function App() {
 
   const completedCount = Object.values(benchmarkComplete).filter(Boolean).length
   const allComplete = completedCount === 3
+
+  // Helper function to get all Whisper transcription data
+  const getWhisperData = () => {
+    return {
+      testResults: whisperTranscriptions,
+      totalScore: { correct: totalCorrect, total: totalWords },
+      passageUsed: selectedPassage,
+      testDate: new Date().toISOString()
+    }
+  }
+
+  // Make Whisper data accessible globally for debugging/export
+  window.getWhisperData = getWhisperData
 
   return (
     <div className={`App ${isDarkMode ? 'dark-mode' : ''}`}>
