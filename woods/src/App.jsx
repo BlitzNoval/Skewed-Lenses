@@ -39,6 +39,7 @@ function App() {
   const [whisperTranscriptions, setWhisperTranscriptions] = useState([])
   const [showBeginButton, setShowBeginButton] = useState(true)
   const [countdownExiting, setCountdownExiting] = useState(false)
+  const [sentenceTimeout, setSentenceTimeout] = useState(null)
 
   // DIBELS passages
   const passages = [
@@ -184,6 +185,14 @@ function App() {
         setCurrentWordIndex(0)
         setTranscribedText('')
         setSentenceWordStatuses(new Array(5).fill(0))
+
+        // Set timeout to auto-advance if sentence takes too long (30 seconds)
+        const timeout = setTimeout(() => {
+          console.log('Sentence timeout - auto-advancing')
+          stopRecording()
+          moveToNextSentence()
+        }, 30000)
+        setSentenceTimeout(timeout)
       })
       .catch(error => {
         console.error('Error accessing microphone:', error)
@@ -239,6 +248,12 @@ function App() {
 
   const stopRecording = () => {
     setIsRecording(false)
+
+    // Clear sentence timeout
+    if (sentenceTimeout) {
+      clearTimeout(sentenceTimeout)
+      setSentenceTimeout(null)
+    }
 
     // Stop MediaRecorder for Whisper
     if (mediaRecorder && mediaRecorder.state === 'recording') {
@@ -353,13 +368,19 @@ function App() {
 
         // Auto-complete sentence when all words are checked
         if (prevIndex + 1 >= currentSentence.length) {
+          // Clear any existing timeout
+          if (sentenceTimeout) {
+            clearTimeout(sentenceTimeout)
+            setSentenceTimeout(null)
+          }
+
           setTimeout(() => {
             stopRecording()
             moveToNextSentence()
-          }, 1000) // Small delay to show final word status
+          }, 800) // Reduced delay to prevent hanging
         }
 
-        return prevIndex + 1 // Move to next expected word
+        return prevIndex + 1 // Always move to next expected word
       })
     })
   }
@@ -378,41 +399,46 @@ function App() {
       const nextSentenceIndex = currentSentenceIndex + 1
       const nextSentence = sentences[nextSentenceIndex]
 
-      // First, trigger roll-out animation for current words
-      currentSentence.forEach((word, index) => {
-        setTimeout(() => {
-          setRollingWords(prev => [...prev, `out-${currentSentenceIndex}-${index}`])
-        }, index * 100) // 100ms stagger for roll-out
+      // Pre-render next sentence words with 'next-sentence' class (invisible but in DOM)
+      setRollingWords(prev => {
+        const nextSentenceKeys = nextSentence.map((_, index) => `next-${nextSentenceIndex}-${index}`)
+        return [...prev, ...nextSentenceKeys]
       })
 
-      // After roll-out completes, switch to next sentence and roll in
+      // Small delay then trigger roll-out animation for current words
+      setTimeout(() => {
+        currentSentence.forEach((word, index) => {
+          setTimeout(() => {
+            setRollingWords(prev => [...prev, `out-${currentSentenceIndex}-${index}`])
+          }, index * 60) // Faster 60ms stagger for roll-out
+        })
+      }, 100)
+
+      // After roll-out completes, switch sentence and trigger roll-in
       setTimeout(() => {
         setCurrentSentenceIndex(nextSentenceIndex)
         setCurrentExpectedWordIndex(0)
         setSentenceWordStatuses(new Array(5).fill(0))
         setTranscribedText('')
 
-        // Wait a bit before starting roll-in to prevent flicker
+        // Clear pre-render and trigger roll-in animation
         setTimeout(() => {
-          // Clear any existing animations
-          setRollingWords([])
+          setRollingWords(prev => prev.filter(key => !key.startsWith('next-')))
 
           // Trigger roll-in animation for next sentence
-          if (nextSentence) {
-            nextSentence.forEach((word, index) => {
-              setTimeout(() => {
-                setRollingWords(prev => [...prev, `in-${nextSentenceIndex}-${index}`])
-              }, index * 100) // 100ms stagger for roll-in
-            })
-
-            // Clean up roll-in animations and start recording
+          nextSentence.forEach((word, index) => {
             setTimeout(() => {
-              setRollingWords([])
-              startRecording()
-            }, nextSentence.length * 100 + 400)
-          }
-        }, 200) // Small delay to prevent flicker
-      }, currentSentence.length * 100 + 600) // Wait for roll-out to complete
+              setRollingWords(prev => [...prev, `in-${nextSentenceIndex}-${index}`])
+            }, index * 60) // Faster 60ms stagger for roll-in
+          })
+
+          // Clean up roll-in animations and start recording
+          setTimeout(() => {
+            setRollingWords([])
+            startRecording()
+          }, nextSentence.length * 60 + 300)
+        }, 100)
+      }, currentSentence.length * 60 + 400) // Faster timing
 
     } else {
       // Test complete
@@ -432,35 +458,35 @@ function App() {
     setShowBeginButton(false)
     setShowCountdown(true)
     setCountdownNumber(5)
+    setCountdownExiting(false)
 
-    const countdownInterval = setInterval(() => {
-      setCountdownNumber(prev => {
-        if (prev <= 1) {
-          clearInterval(countdownInterval)
+    let currentNum = 5
 
-          // Start exit animation
-          setCountdownExiting(true)
+    const nextCountdownStep = () => {
+      if (currentNum <= 1) {
+        // Exit final number and end countdown
+        setCountdownExiting(true)
+        setTimeout(() => {
+          setShowCountdown(false)
+          setTestStarted(true)
+          startRecording()
+        }, 400)
+      } else {
+        // Exit current number
+        setCountdownExiting(true)
+        setTimeout(() => {
+          // Move to next number
+          currentNum--
+          setCountdownNumber(currentNum)
+          setCountdownExiting(false)
+          // Schedule next step - show number then trigger next exit
+          setTimeout(nextCountdownStep, 800)
+        }, 400)
+      }
+    }
 
-          setTimeout(() => {
-            setShowCountdown(false)
-            setCountdownExiting(false)
-            setTestStarted(true)
-            startRecording()
-          }, 300) // Wait for exit animation
-
-          return 0
-        } else {
-          // Trigger exit animation for current number
-          setCountdownExiting(true)
-
-          setTimeout(() => {
-            setCountdownExiting(false)
-          }, 300)
-
-          return prev - 1
-        }
-      })
-    }, 1000)
+    // Start the countdown sequence after showing 5 for 800ms
+    setTimeout(nextCountdownStep, 800)
   }
 
   const completedCount = Object.values(benchmarkComplete).filter(Boolean).length
@@ -604,6 +630,14 @@ function App() {
 
       {showRecordingInterface && (
         <div className="test-interface">
+          {/* Persistent Home Button */}
+          <button
+            className="persistent-home-btn"
+            onClick={() => handlePageTransition('begin')}
+          >
+            ← HOME
+          </button>
+
           {/* Begin Button - Only visible initially */}
           {showBeginButton && (
             <button className="begin-benchmark-btn" onClick={startTest}>
@@ -635,8 +669,10 @@ function App() {
                 {sentences[currentSentenceIndex] && sentences[currentSentenceIndex].map((word, index) => {
                   const rollOutKey = `out-${currentSentenceIndex}-${index}`
                   const rollInKey = `in-${currentSentenceIndex}-${index}`
+                  const nextKey = `next-${currentSentenceIndex}-${index}`
                   const isRollingOut = rollingWords.includes(rollOutKey)
                   const isRollingIn = rollingWords.includes(rollInKey)
+                  const isNextSentence = rollingWords.includes(nextKey)
 
                   return (
                     <span
@@ -645,7 +681,7 @@ function App() {
                         sentenceWordStatuses[index] === 1 ? 'correct' :
                         sentenceWordStatuses[index] === 2 ? 'incorrect' :
                         index === currentExpectedWordIndex ? 'current' : 'unread'
-                      } ${isRollingOut ? 'rolling-out' : ''} ${isRollingIn ? 'rolling-in' : ''}`}
+                      } ${isRollingOut ? 'rolling-out' : ''} ${isRollingIn ? 'rolling-in' : ''} ${isNextSentence ? 'next-sentence' : ''}`}
                     >
                       {word}
                     </span>
