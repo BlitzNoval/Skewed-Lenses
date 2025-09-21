@@ -31,6 +31,11 @@ function App() {
   const [sentenceWordStatuses, setSentenceWordStatuses] = useState([])
   const [totalCorrect, setTotalCorrect] = useState(0)
   const [totalWords, setTotalWords] = useState(0)
+  const [showCountdown, setShowCountdown] = useState(false)
+  const [countdownNumber, setCountdownNumber] = useState(5)
+  const [testStarted, setTestStarted] = useState(false)
+  const [rollingWords, setRollingWords] = useState([])
+  const [countdownFlyOut, setCountdownFlyOut] = useState(false)
 
   // DIBELS passages
   const passages = [
@@ -183,11 +188,17 @@ function App() {
       }
 
       const data = await response.json()
+      console.log('Backend response:', data)
 
-      if (data.transcription) {
+      // Backend returns "text" not "transcription"
+      if (data.text) {
+        setTranscribedText(data.text)
+        checkWordsRealTime(data.text)
+      } else if (data.transcription) {
         setTranscribedText(data.transcription)
         checkWordsRealTime(data.transcription)
       } else {
+        console.error('Unexpected response format:', data)
         throw new Error('No transcription received')
       }
     } catch (error) {
@@ -239,7 +250,8 @@ function App() {
         if (prevIndex + 1 >= currentSentence.length) {
           setTimeout(() => {
             stopRecording()
-          }, 500) // Small delay to show final word status
+            moveToNextSentence()
+          }, 1000) // Small delay to show final word status
         }
 
         return prevIndex + 1 // Move to next expected word
@@ -261,7 +273,42 @@ function App() {
       setCurrentExpectedWordIndex(0)
       setSentenceWordStatuses(new Array(5).fill(0))
       setTranscribedText('')
+
+      // Auto-start recording for next sentence
+      setTimeout(() => {
+        startRecording()
+      }, 1000)
+    } else {
+      // Test complete
+      setTestStarted(false)
+      setIsRecording(false)
+      alert(`Test Complete! Score: ${totalCorrect}/${totalWords}`)
     }
+  }
+
+  const startTest = () => {
+    setShowCountdown(true)
+    setCountdownNumber(5)
+
+    const countdownInterval = setInterval(() => {
+      setCountdownNumber(prev => {
+        if (prev <= 1) {
+          clearInterval(countdownInterval)
+          // Trigger fly-out animation
+          setCountdownFlyOut(true)
+
+          setTimeout(() => {
+            setShowCountdown(false)
+            setCountdownFlyOut(false)
+            setTestStarted(true)
+            startRecording()
+          }, 500) // Wait for fly-out animation
+
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
   }
 
   const completedCount = Object.values(benchmarkComplete).filter(Boolean).length
@@ -391,90 +438,54 @@ function App() {
       )}
 
       {showRecordingInterface && (
-        <div className="recording-interface">
-          <div className="recording-container">
-            <div className="left-section">
-              <div className="score-display">
-                Score: {totalCorrect}/{totalWords}
-              </div>
-
-              <button
-                className={`start-recording-btn ${isRecording ? 'recording' : ''}`}
-                onClick={handleRecordingToggle}
-                disabled={isTranscribing}
-              >
-                {isTranscribing ? 'Transcribing...' : isRecording ? 'Stop Recording' : 'Start Recording'}
-              </button>
+        <div className="test-interface">
+          <div className="test-content">
+            <div className="words-section">
+              {sentences[currentSentenceIndex] && sentences[currentSentenceIndex].map((word, index) => (
+                <span
+                  key={`${currentSentenceIndex}-${index}`}
+                  className={`test-word ${
+                    sentenceWordStatuses[index] === 1 ? 'correct' :
+                    sentenceWordStatuses[index] === 2 ? 'incorrect' :
+                    index === currentExpectedWordIndex ? 'current' : 'unread'
+                  }`}
+                >
+                  {word}
+                </span>
+              ))}
             </div>
 
-            <div className="right-section">
-              <div className="casino-container">
-                {/* Previous sentence (if exists) */}
-                {currentSentenceIndex > 0 && (
-                  <div className="sentence-slot previous">
-                    <div className="word-container">
-                      {sentences[currentSentenceIndex - 1].map((word, index) => (
-                        <span key={index} className="casino-word">
-                          {word}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Current sentence */}
-                {sentences[currentSentenceIndex] && (
-                  <div className="sentence-slot current">
-                    <div className="word-container">
-                      {sentences[currentSentenceIndex].map((word, index) => (
-                        <span
-                          key={index}
-                          className={`casino-word ${
-                            sentenceWordStatuses[index] === 1 ? 'correct' :
-                            sentenceWordStatuses[index] === 2 ? 'incorrect' :
-                            index === currentExpectedWordIndex ? 'current' : ''
-                          }`}
-                        >
-                          {word}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Next sentence (if exists) */}
-                {currentSentenceIndex < sentences.length - 1 && (
-                  <div className="sentence-slot next">
-                    <div className="word-container">
-                      {sentences[currentSentenceIndex + 1].map((word, index) => (
-                        <span key={index} className="casino-word">
-                          {word}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="sentence-controls">
-                <button
-                  className="next-sentence-btn"
-                  onClick={moveToNextSentence}
-                  disabled={currentSentenceIndex >= sentences.length - 1 ||
-                           sentenceWordStatuses.slice(0, sentences[currentSentenceIndex]?.length || 0).includes(0)}
-                >
-                  Next Sentence
-                </button>
-              </div>
-
-              {transcribedText && (
-                <div className="transcription-debug">
-                  <h4>Transcribed: </h4>
-                  <p>{transcribedText}</p>
+            <div className="score-section">
+              {testStarted ? (
+                <div className="fluency-score-text">
+                  Fluency Score: {totalCorrect}/{totalWords}
                 </div>
+              ) : showCountdown ? (
+                <div className={`countdown-container ${countdownFlyOut ? 'fly-out' : ''}`}>
+                  <div className="countdown-circle-bg"></div>
+                  <div
+                    className="countdown-progress-ring"
+                    style={{
+                      '--progress': `${((5 - countdownNumber) / 5) * 360}deg`
+                    }}
+                  ></div>
+                  <div className="countdown-number">{countdownNumber}</div>
+                </div>
+              ) : (
+                <button className="start-test-btn" onClick={startTest}>
+                  Start Test
+                </button>
               )}
             </div>
           </div>
+
+
+          {transcribedText && (
+            <div className="transcription-debug" style={{position: 'absolute', bottom: '20px', left: '20px'}}>
+              <h4>Transcribed: </h4>
+              <p>{transcribedText}</p>
+            </div>
+          )}
         </div>
       )}
 

@@ -1051,7 +1051,207 @@
   word-break: break-word;
 }
 
-/* Casino-style sentence interface */
+/* Simplified test interface */
+.test-interface {
+  width: 100vw;
+  height: 100vh;
+  background: #f8f8f8;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+.test-interface::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image:
+    radial-gradient(circle at 25% 25%, rgba(0,0,0,0.015) 1px, transparent 1px),
+    radial-gradient(circle at 75% 75%, rgba(0,0,0,0.01) 1px, transparent 1px),
+    radial-gradient(circle at 50% 10%, rgba(0,0,0,0.008) 1px, transparent 1px),
+    radial-gradient(circle at 10% 80%, rgba(0,0,0,0.02) 1px, transparent 1px);
+  background-size: 3px 3px, 5px 5px, 2px 2px, 4px 4px;
+  background-position: 0 0, 2px 2px, 1px 1px, 3px 3px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.test-content {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 60px;
+  max-width: 1200px;
+  width: 100%;
+  padding: 40px;
+}
+
+.words-section {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  align-items: center;
+  justify-content: center;
+  font-family: 'SF Pro Display', 'Helvetica Neue', 'Segoe UI', 'Arial', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 400;
+}
+
+.test-word {
+  padding: 8px 16px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  background: transparent;
+}
+
+.test-word.current {
+  color: #007AFF;
+  background: transparent;
+}
+
+.test-word.correct {
+  color: #34C759;
+  background: transparent;
+}
+
+.test-word.incorrect {
+  color: #FF9500;
+  background: transparent;
+}
+
+.test-word.unread {
+  color: #000;
+  background: transparent;
+}
+
+.score-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+  min-width: 280px;
+  min-height: 120px;
+  justify-content: center;
+}
+
+.fluency-score {
+  background: white;
+  padding: 25px 35px;
+  border-radius: 16px;
+  border: 2px solid #e0e0e0;
+  font-family: 'SF Pro Display', 'Helvetica Neue', 'Segoe UI', 'Arial', sans-serif;
+  font-size: 2rem;
+  font-weight: 600;
+  color: #000;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  min-width: 200px;
+}
+
+.start-test-btn {
+  padding: 1.3rem 3rem;
+  border: none;
+  border-radius: 30px;
+  font-family: 'SF Pro Display', 'Helvetica Neue', 'Segoe UI', 'Arial', sans-serif;
+  font-weight: 600;
+  font-size: 1.3rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-transform: uppercase;
+  -webkit-font-smoothing: antialiased;
+  background: #1a1a1a;
+  color: #ffffff;
+}
+
+.start-test-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 4px 8px 0px rgba(0, 0, 0, 0.4);
+}
+
+.countdown-container {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.countdown-circle-bg {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 4px solid #e0e0e0;
+}
+
+.countdown-progress-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: conic-gradient(#000000 0deg, #000000 var(--progress, 360deg), transparent var(--progress, 360deg));
+  mask: radial-gradient(circle, transparent 50px, black 54px);
+  transition: all 1s ease;
+}
+
+.countdown-number {
+  font-family: 'SF Pro Display', 'Helvetica Neue', 'Segoe UI', 'Arial', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: #000000;
+  z-index: 10;
+}
+
+.countdown-container.fly-out {
+  animation: flyOut 0.5s ease-in forwards;
+}
+
+@keyframes flyOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(200px);
+    opacity: 0;
+  }
+}
+
+.fluency-score-text {
+  font-family: 'SF Pro Display', 'Helvetica Neue', 'Segoe UI', 'Arial', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 400;
+  color: rgba(0, 0, 0, 0.7);
+  animation: fadeIn 0.5s ease-in forwards;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 .left-section {
   width: 20%;
   background: #f8f8f8;
