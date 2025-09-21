@@ -51,14 +51,27 @@ function App() {
   const passage = passages[selectedPassage]
   const words = passage.split(' ')
 
-  // Function to break passage into 5-word sentences (remove punctuation)
-  const createSentences = (passageText) => {
+  // Function to break passage into 30-word test chunks, then into 5-word sentences
+  const createTestChunks = (passageText) => {
     const cleanedText = passageText.replace(/[.,!?;]/g, '')
     const allWords = cleanedText.split(' ').filter(w => w.trim())
+
+    // Create 30-word chunks
+    const testChunks = []
+    for (let i = 0; i < allWords.length; i += 30) {
+      const chunk = allWords.slice(i, i + 30)
+      if (chunk.length >= 30) { // Only use complete 30-word chunks
+        testChunks.push(chunk)
+      }
+    }
+    return testChunks
+  }
+
+  const createSentences = (thirtyWords) => {
     const sentenceChunks = []
-    for (let i = 0; i < allWords.length; i += 5) {
-      const chunk = allWords.slice(i, i + 5)
-      if (chunk.length > 0) {
+    for (let i = 0; i < thirtyWords.length; i += 5) {
+      const chunk = thirtyWords.slice(i, i + 5)
+      if (chunk.length === 5) { // Only use complete 5-word sentences
         sentenceChunks.push(chunk)
       }
     }
@@ -70,15 +83,25 @@ function App() {
     setWordStatuses(new Array(words.length).fill(0))
     setCurrentExpectedWordIndex(0)
 
-    const sentenceChunks = createSentences(passage)
-    setSentences(sentenceChunks)
-    setCurrentSentenceIndex(0)
-    setSentenceWordStatuses(new Array(5).fill(0)) // Max 5 words per sentence
-    setTotalCorrect(0)
+    // Get all possible 30-word chunks from the passage
+    const testChunks = createTestChunks(passage)
 
-    // Calculate total words without punctuation
-    const cleanedWords = passage.replace(/[.,!?;]/g, '').split(' ').filter(w => w.trim())
-    setTotalWords(cleanedWords.length)
+    if (testChunks.length > 0) {
+      // Randomly select one 30-word chunk
+      const randomChunkIndex = Math.floor(Math.random() * testChunks.length)
+      const selectedThirtyWords = testChunks[randomChunkIndex]
+
+      // Break the 30 words into 6 sentences of 5 words each
+      const sentenceChunks = createSentences(selectedThirtyWords)
+      setSentences(sentenceChunks)
+      setCurrentSentenceIndex(0)
+      setSentenceWordStatuses(new Array(5).fill(0)) // Max 5 words per sentence
+      setTotalCorrect(0)
+      setTotalWords(30) // Always 30 words now
+
+      console.log('Selected 30-word chunk:', selectedThirtyWords)
+      console.log('Created sentences:', sentenceChunks)
+    }
   }, [words.length, passage])
 
   const handlePageTransition = (page) => {
@@ -344,15 +367,40 @@ function App() {
 
   const moveToNextSentence = () => {
     if (currentSentenceIndex < sentences.length - 1) {
-      setCurrentSentenceIndex(prev => prev + 1)
-      setCurrentExpectedWordIndex(0)
-      setSentenceWordStatuses(new Array(5).fill(0))
-      setTranscribedText('')
+      // First, trigger roll-out animation for current words
+      sentences[currentSentenceIndex].forEach((word, index) => {
+        setTimeout(() => {
+          setRollingWords(prev => [...prev, `out-${currentSentenceIndex}-${index}`])
+        }, index * 100) // 100ms stagger for roll-out
+      })
 
-      // Auto-start recording for next sentence
+      // After roll-out completes, switch to next sentence and roll in
       setTimeout(() => {
-        startRecording()
-      }, 1000)
+        setCurrentSentenceIndex(prev => prev + 1)
+        setCurrentExpectedWordIndex(0)
+        setSentenceWordStatuses(new Array(5).fill(0))
+        setTranscribedText('')
+
+        // Clear roll-out animations
+        setRollingWords([])
+
+        // Trigger roll-in animation for next sentence
+        const nextSentence = sentences[currentSentenceIndex + 1]
+        if (nextSentence) {
+          nextSentence.forEach((word, index) => {
+            setTimeout(() => {
+              setRollingWords(prev => [...prev, `in-${currentSentenceIndex + 1}-${index}`])
+            }, index * 100) // 100ms stagger for roll-in
+          })
+
+          // Clean up roll-in animations and start recording
+          setTimeout(() => {
+            setRollingWords([])
+            startRecording()
+          }, nextSentence.length * 100 + 600)
+        }
+      }, sentences[currentSentenceIndex].length * 100 + 600) // Wait for roll-out to complete
+
     } else {
       // Test complete
       setTestStarted(false)
@@ -535,18 +583,25 @@ function App() {
         <div className="test-interface">
           <div className="test-content">
             <div className="words-section">
-              {sentences[currentSentenceIndex] && sentences[currentSentenceIndex].map((word, index) => (
-                <span
-                  key={`${currentSentenceIndex}-${index}`}
-                  className={`test-word ${
-                    sentenceWordStatuses[index] === 1 ? 'correct' :
-                    sentenceWordStatuses[index] === 2 ? 'incorrect' :
-                    index === currentExpectedWordIndex ? 'current' : 'unread'
-                  }`}
-                >
-                  {word}
-                </span>
-              ))}
+              {sentences[currentSentenceIndex] && sentences[currentSentenceIndex].map((word, index) => {
+                const rollOutKey = `out-${currentSentenceIndex}-${index}`
+                const rollInKey = `in-${currentSentenceIndex}-${index}`
+                const isRollingOut = rollingWords.includes(rollOutKey)
+                const isRollingIn = rollingWords.includes(rollInKey)
+
+                return (
+                  <span
+                    key={`${currentSentenceIndex}-${index}`}
+                    className={`test-word ${
+                      sentenceWordStatuses[index] === 1 ? 'correct' :
+                      sentenceWordStatuses[index] === 2 ? 'incorrect' :
+                      index === currentExpectedWordIndex ? 'current' : 'unread'
+                    } ${isRollingOut ? 'rolling-out' : ''} ${isRollingIn ? 'rolling-in' : ''}`}
+                  >
+                    {word}
+                  </span>
+                )
+              })}
             </div>
 
             <div className="score-section">

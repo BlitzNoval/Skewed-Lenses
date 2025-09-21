@@ -1132,6 +1132,36 @@
   background: transparent;
 }
 
+.test-word.rolling-out {
+  animation: rollOutWord 0.6s ease-in forwards;
+}
+
+.test-word.rolling-in {
+  animation: rollInWord 0.6s ease-out forwards;
+}
+
+@keyframes rollOutWord {
+  from {
+    transform: translateY(0) rotateX(0deg);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-50px) rotateX(90deg);
+    opacity: 0;
+  }
+}
+
+@keyframes rollInWord {
+  from {
+    transform: translateY(50px) rotateX(-90deg);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) rotateX(0deg);
+    opacity: 1;
+  }
+}
+
 .score-section {
   display: flex;
   flex-direction: column;
