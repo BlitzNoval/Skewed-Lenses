@@ -1,6 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import './App.css'
 import OneInTen from './components/Globe'
+import useSpeechStore from './store/useSpeechStore'
+import useSpeechRecognition from './hooks/useSpeechRecognition'
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home')
@@ -11,35 +13,99 @@ function App() {
     benchmark2: false,
     benchmark3: false
   })
+  const [savedBenchmarkResults, setSavedBenchmarkResults] = useState({
+    benchmark1: null,
+    benchmark2: null,
+    benchmark3: null
+  })
   const [showBenchmark1Modal, setShowBenchmark1Modal] = useState(false)
   const [showBenchmark2Modal, setShowBenchmark2Modal] = useState(false)
   const [showBenchmark3Modal, setShowBenchmark3Modal] = useState(false)
   const [modalClosing, setModalClosing] = useState(false)
   const [showRecordingInterface, setShowRecordingInterface] = useState(false)
   const [buttonsSlideOut, setButtonsSlideOut] = useState(false)
-  const [isRecording, setIsRecording] = useState(false)
-  const [currentWordIndex, setCurrentWordIndex] = useState(0)
-  const [mediaRecorder, setMediaRecorder] = useState(null)
-  const [audioChunks, setAudioChunks] = useState([])
-  const [transcribedText, setTranscribedText] = useState('')
-  const [isTranscribing, setIsTranscribing] = useState(false)
-  const [recognition, setRecognition] = useState(null)
-  const [wordStatuses, setWordStatuses] = useState([])
-  const [currentExpectedWordIndex, setCurrentExpectedWordIndex] = useState(0)
-  const [sentences, setSentences] = useState([])
-  const [currentSentenceIndex, setCurrentSentenceIndex] = useState(0)
-  const [sentenceWordStatuses, setSentenceWordStatuses] = useState([])
-  const [totalCorrect, setTotalCorrect] = useState(0)
-  const [totalWords, setTotalWords] = useState(0)
   const [showCountdown, setShowCountdown] = useState(false)
   const [countdownNumber, setCountdownNumber] = useState(5)
   const [testStarted, setTestStarted] = useState(false)
-  const [rollingWords, setRollingWords] = useState([])
-  const [countdownFlyOut, setCountdownFlyOut] = useState(false)
-  const [whisperTranscriptions, setWhisperTranscriptions] = useState([])
   const [showBeginButton, setShowBeginButton] = useState(true)
-  const [countdownExiting, setCountdownExiting] = useState(false)
-  const [sentenceTimeout, setSentenceTimeout] = useState(null)
+  const [resultsSaved, setResultsSaved] = useState(false)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [pendingAction, setPendingAction] = useState(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
+  const [showSaveFailModal, setShowSaveFailModal] = useState(false)
+  const [showRestartConfirmModal, setShowRestartConfirmModal] = useState(false)
+  const [currentBenchmark, setCurrentBenchmark] = useState('benchmark1')
+  const [audioLevel, setAudioLevel] = useState(0)
+  const [noInputDetected, setNoInputDetected] = useState(false)
+
+  // Speech recognition
+  const { isListening, isSupported, startListening, stopListening } = useSpeechRecognition()
+  const {
+    currentSentenceIndex,
+    currentWordIndex,
+    sentences,
+    wordStatuses,
+    totalCorrect,
+    totalWords,
+    isAssessmentActive,
+    transcript,
+    interimTranscript,
+    canSkipCurrentWord,
+    benchmarkCompleted,
+    benchmarkResults,
+    initializeAssessment,
+    moveToNextSentence,
+    skipCurrentWord,
+    saveResults,
+    resetBenchmark
+  } = useSpeechStore()
+
+  // Keyboard event handler for Enter key
+  useEffect(() => {
+    const handleKeyPress = (event) => {
+      if (event.key === 'Enter' && testStarted && isAssessmentActive && !benchmarkCompleted && canSkipCurrentWord) {
+        event.preventDefault()
+        skipCurrentWord()
+      }
+    }
+
+    if (testStarted && isAssessmentActive && !benchmarkCompleted) {
+      document.addEventListener('keydown', handleKeyPress)
+      return () => document.removeEventListener('keydown', handleKeyPress)
+    }
+  }, [testStarted, isAssessmentActive, benchmarkCompleted, canSkipCurrentWord, skipCurrentWord])
+
+  // No input detection for microphone status
+  useEffect(() => {
+    let noInputTimer
+
+    if (isListening && testStarted && isAssessmentActive && !benchmarkCompleted) {
+      // Reset no input state when starting to listen
+      setNoInputDetected(false)
+
+      // Set timer to detect if no input after 8 seconds of listening
+      noInputTimer = setTimeout(() => {
+        if (isListening && !transcript && !interimTranscript) {
+          setNoInputDetected(true)
+        }
+      }, 8000)
+    } else {
+      // Reset when not listening
+      setNoInputDetected(false)
+    }
+
+    // Reset no input state when we get new transcript
+    if (transcript || interimTranscript) {
+      setNoInputDetected(false)
+    }
+
+    return () => {
+      if (noInputTimer) {
+        clearTimeout(noInputTimer)
+      }
+    }
+  }, [isListening, testStarted, isAssessmentActive, benchmarkCompleted, transcript, interimTranscript])
 
   // DIBELS passages
   const passages = [
@@ -52,7 +118,6 @@ function App() {
 
   const [selectedPassage] = useState(() => Math.floor(Math.random() * passages.length))
   const passage = passages[selectedPassage]
-  const words = passage.split(' ')
 
   // Function to break passage into 30-word test chunks, then into 5-word sentences
   const createTestChunks = (passageText) => {
@@ -81,31 +146,42 @@ function App() {
     return sentenceChunks
   }
 
-  // Initialize word statuses and sentences (0 = unread, 1 = correct, 2 = incorrect)
-  React.useEffect(() => {
-    setWordStatuses(new Array(words.length).fill(0))
-    setCurrentExpectedWordIndex(0)
+  // Load saved benchmark data on app initialization
+  useEffect(() => {
+    const loadSavedBenchmarks = () => {
+      try {
+        const savedResults = localStorage.getItem('savedBenchmarkResults')
+        if (savedResults) {
+          const parsedResults = JSON.parse(savedResults)
+          setSavedBenchmarkResults(parsedResults)
 
-    // Get all possible 30-word chunks from the passage
+          // Update completion status based on saved results
+          setBenchmarkComplete({
+            benchmark1: !!parsedResults.benchmark1,
+            benchmark2: !!parsedResults.benchmark2,
+            benchmark3: !!parsedResults.benchmark3
+          })
+        }
+      } catch (error) {
+        console.error('Error loading saved benchmarks:', error)
+      }
+    }
+
+    loadSavedBenchmarks()
+  }, [])
+
+  // Initialize assessment sentences
+  useEffect(() => {
     const testChunks = createTestChunks(passage)
-
     if (testChunks.length > 0) {
-      // Randomly select one 30-word chunk
       const randomChunkIndex = Math.floor(Math.random() * testChunks.length)
       const selectedThirtyWords = testChunks[randomChunkIndex]
-
-      // Break the 30 words into 6 sentences of 5 words each
       const sentenceChunks = createSentences(selectedThirtyWords)
-      setSentences(sentenceChunks)
-      setCurrentSentenceIndex(0)
-      setSentenceWordStatuses(new Array(5).fill(0)) // Max 5 words per sentence
-      setTotalCorrect(0)
-      setTotalWords(30) // Always 30 words now
 
       console.log('Selected 30-word chunk:', selectedThirtyWords)
       console.log('Created sentences:', sentenceChunks)
     }
-  }, [words.length, passage])
+  }, [passage])
 
   const handlePageTransition = (page) => {
     setIsTransitioning(true)
@@ -116,17 +192,38 @@ function App() {
   }
 
   const handleBenchmarkClick = (benchmarkKey) => {
-    if (benchmarkKey === 'benchmark1') {
-      setShowBenchmark1Modal(true)
-    } else if (benchmarkKey === 'benchmark2') {
-      setShowBenchmark2Modal(true)
-    } else if (benchmarkKey === 'benchmark3') {
-      setShowBenchmark3Modal(true)
+    setCurrentBenchmark(benchmarkKey)
+
+    // Check if this benchmark is already completed with saved results
+    if (savedBenchmarkResults[benchmarkKey]) {
+      // Load the saved results and show the results screen directly
+      const savedResult = savedBenchmarkResults[benchmarkKey]
+
+      // Set the speech store to the completed state with saved results
+      resetBenchmark()
+      // Use a setTimeout to ensure the reset happens first
+      setTimeout(() => {
+        // Manually set the benchmark as completed with the saved results
+        useSpeechStore.setState({
+          benchmarkCompleted: true,
+          benchmarkResults: savedResult
+        })
+
+        setShowRecordingInterface(true)
+        setButtonsSlideOut(true)
+        setTestStarted(true)
+        setShowBeginButton(false) // Hide begin button for completed results
+        setResultsSaved(true) // Mark as already saved
+      }, 100)
     } else {
-      setBenchmarkComplete(prev => ({
-        ...prev,
-        [benchmarkKey]: !prev[benchmarkKey]
-      }))
+      // Show the normal modal for starting a new benchmark
+      if (benchmarkKey === 'benchmark1') {
+        setShowBenchmark1Modal(true)
+      } else if (benchmarkKey === 'benchmark2') {
+        setShowBenchmark2Modal(true)
+      } else if (benchmarkKey === 'benchmark3') {
+        setShowBenchmark3Modal(true)
+      }
     }
   }
 
@@ -135,7 +232,7 @@ function App() {
     setTimeout(() => {
       modalSetter(false)
       setModalClosing(false)
-    }, 300)
+    }, 150)
   }
 
   const startBenchmark1 = () => {
@@ -146,368 +243,217 @@ function App() {
     }, 800)
   }
 
-  const startRecording = () => {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      alert('Recording not supported in this browser')
-      return
-    }
-
-    navigator.mediaDevices.getUserMedia({ audio: true })
-      .then(stream => {
-        // Start Web Speech API for instant feedback
-        startWebSpeechRecognition()
-
-        // Start MediaRecorder for Whisper accuracy verification
-        const newMediaRecorder = new MediaRecorder(stream, {
-          mimeType: 'audio/webm;codecs=opus'
-        })
-
-        const chunks = []
-
-        newMediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0) {
-            chunks.push(event.data)
-          }
-        }
-
-        newMediaRecorder.onstop = () => {
-          const audioBlob = new Blob(chunks, { type: 'audio/webm' })
-          transcribeWithWhisper(audioBlob) // Background verification
-          stream.getTracks().forEach(track => track.stop())
-        }
-
-        newMediaRecorder.start()
-        setMediaRecorder(newMediaRecorder)
-        setIsRecording(true)
-
-        // Reset tracking state for new sentence
-        setCurrentExpectedWordIndex(0)
-        setCurrentWordIndex(0)
-        setTranscribedText('')
-        setSentenceWordStatuses(new Array(5).fill(0))
-
-        // Set timeout to auto-advance if sentence takes too long (30 seconds)
-        const timeout = setTimeout(() => {
-          console.log('Sentence timeout - auto-advancing')
-          stopRecording()
-          moveToNextSentence()
-        }, 30000)
-        setSentenceTimeout(timeout)
-      })
-      .catch(error => {
-        console.error('Error accessing microphone:', error)
-        alert('Error accessing microphone')
-      })
-  }
-
-  const startWebSpeechRecognition = () => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      console.warn('Web Speech API not supported, using Whisper only')
-      return
-    }
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    const newRecognition = new SpeechRecognition()
-
-    newRecognition.continuous = true
-    newRecognition.interimResults = true
-    newRecognition.lang = 'en-US'
-
-    newRecognition.onresult = (event) => {
-      let finalText = ''
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          finalText += event.results[i][0].transcript
-        }
-      }
-
-      // Process for instant visual feedback
-      if (finalText.trim()) {
-        checkWordsRealTime(finalText)
-      }
-    }
-
-    newRecognition.onerror = (event) => {
-      console.error('Speech recognition error:', event.error)
-    }
-
-    newRecognition.onend = () => {
-      // Auto-restart if still recording
-      if (isRecording) {
-        setTimeout(() => {
-          if (isRecording) { // Double check still recording
-            newRecognition.start()
-          }
-        }, 100)
-      }
-    }
-
-    newRecognition.start()
-    setRecognition(newRecognition)
-  }
-
-  const stopRecording = () => {
-    setIsRecording(false)
-
-    // Clear sentence timeout
-    if (sentenceTimeout) {
-      clearTimeout(sentenceTimeout)
-      setSentenceTimeout(null)
-    }
-
-    // Stop MediaRecorder for Whisper
-    if (mediaRecorder && mediaRecorder.state === 'recording') {
-      mediaRecorder.stop()
-    }
-
-    // Stop Web Speech API
-    if (recognition) {
-      recognition.stop()
-      setRecognition(null) // Clear recognition reference
-    }
-  }
-
-  const transcribeWithWhisper = async (audioBlob) => {
-    try {
-      setIsTranscribing(true)
-
-      const formData = new FormData()
-      formData.append('audio', audioBlob, 'audio.webm')
-
-      const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5001'
-
-      const response = await fetch(`${API_URL}/transcribe`, {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data = await response.json()
-      console.log('Backend response:', data)
-
-      // Backend returns "text" not "transcription"
-      if (data.text) {
-        // Save Whisper transcription for current sentence (hidden from user)
-        setWhisperTranscriptions(prev => {
-          const newTranscriptions = [...prev]
-          newTranscriptions[currentSentenceIndex] = {
-            sentenceIndex: currentSentenceIndex,
-            expectedWords: sentences[currentSentenceIndex],
-            whisperTranscription: data.text,
-            timestamp: new Date().toISOString()
-          }
-          return newTranscriptions
-        })
-
-        console.log('Whisper transcription saved for sentence', currentSentenceIndex, ':', data.text)
-      } else if (data.transcription) {
-        // Save Whisper transcription for current sentence (hidden from user)
-        setWhisperTranscriptions(prev => {
-          const newTranscriptions = [...prev]
-          newTranscriptions[currentSentenceIndex] = {
-            sentenceIndex: currentSentenceIndex,
-            expectedWords: sentences[currentSentenceIndex],
-            whisperTranscription: data.transcription,
-            timestamp: new Date().toISOString()
-          }
-          return newTranscriptions
-        })
-
-        console.log('Whisper transcription saved for sentence', currentSentenceIndex, ':', data.transcription)
-      } else {
-        console.error('Unexpected response format:', data)
-        throw new Error('No transcription received')
-      }
-    } catch (error) {
-      console.error('Transcription error:', error)
-      alert('Transcription failed. Make sure the backend is running.')
-    } finally {
-      setIsTranscribing(false)
-    }
-  }
-
-  const checkWordsRealTime = (spokenText) => {
-    const cleanSpoken = spokenText.toLowerCase().replace(/[.,!?;]/g, '').trim()
-    const spokenWords = cleanSpoken.split(' ').filter(w => w.trim())
-
-    if (currentSentenceIndex >= sentences.length) return
-
-    const currentSentence = sentences[currentSentenceIndex]
-
-    spokenWords.forEach(spokenWord => {
-      setCurrentExpectedWordIndex(prevIndex => {
-        if (prevIndex >= currentSentence.length) {
-          return prevIndex // Already at the end of current sentence
-        }
-
-        const expectedWord = currentSentence[prevIndex].toLowerCase().replace(/[.,!?;]/g, '')
-
-        // More flexible word matching for speech recognition variations
-        const isMatch = spokenWord === expectedWord ||
-                       spokenWord.includes(expectedWord) ||
-                       expectedWord.includes(spokenWord) ||
-                       // Handle common speech recognition variations
-                       (expectedWord.length > 3 && spokenWord.length > 3 &&
-                        (expectedWord.startsWith(spokenWord.slice(0, 3)) ||
-                         spokenWord.startsWith(expectedWord.slice(0, 3))))
-
-        // Update sentence word status immediately
-        setSentenceWordStatuses(prev => {
-          const newStatuses = [...prev]
-          newStatuses[prevIndex] = isMatch ? 1 : 2 // 1 = correct (green), 2 = incorrect (orange)
-          return newStatuses
-        })
-
-        // Update correct count only
-        if (isMatch) {
-          setTotalCorrect(prev => prev + 1)
-        }
-
-        // Auto-complete sentence when all words are checked
-        if (prevIndex + 1 >= currentSentence.length) {
-          // Clear any existing timeout
-          if (sentenceTimeout) {
-            clearTimeout(sentenceTimeout)
-            setSentenceTimeout(null)
-          }
-
-          setTimeout(() => {
-            stopRecording()
-            moveToNextSentence()
-          }, 800) // Reduced delay to prevent hanging
-        }
-
-        return prevIndex + 1 // Always move to next expected word
-      })
-    })
-  }
-
-  const handleRecordingToggle = () => {
-    if (isRecording) {
-      stopRecording()
-    } else {
-      startRecording()
-    }
-  }
-
-  const moveToNextSentence = () => {
-    if (currentSentenceIndex < sentences.length - 1) {
-      const currentSentence = sentences[currentSentenceIndex]
-      const nextSentenceIndex = currentSentenceIndex + 1
-      const nextSentence = sentences[nextSentenceIndex]
-
-      // Pre-render next sentence words with 'next-sentence' class (invisible but in DOM)
-      setRollingWords(prev => {
-        const nextSentenceKeys = nextSentence.map((_, index) => `next-${nextSentenceIndex}-${index}`)
-        return [...prev, ...nextSentenceKeys]
-      })
-
-      // Small delay then trigger roll-out animation for current words
-      setTimeout(() => {
-        currentSentence.forEach((word, index) => {
-          setTimeout(() => {
-            setRollingWords(prev => [...prev, `out-${currentSentenceIndex}-${index}`])
-          }, index * 60) // Faster 60ms stagger for roll-out
-        })
-      }, 100)
-
-      // After roll-out completes, switch sentence and trigger roll-in
-      setTimeout(() => {
-        setCurrentSentenceIndex(nextSentenceIndex)
-        setCurrentExpectedWordIndex(0)
-        setSentenceWordStatuses(new Array(5).fill(0))
-        setTranscribedText('')
-
-        // Clear pre-render and trigger roll-in animation
-        setTimeout(() => {
-          setRollingWords(prev => prev.filter(key => !key.startsWith('next-')))
-
-          // Trigger roll-in animation for next sentence
-          nextSentence.forEach((word, index) => {
-            setTimeout(() => {
-              setRollingWords(prev => [...prev, `in-${nextSentenceIndex}-${index}`])
-            }, index * 60) // Faster 60ms stagger for roll-in
-          })
-
-          // Clean up roll-in animations and start recording
-          setTimeout(() => {
-            setRollingWords([])
-            startRecording()
-          }, nextSentence.length * 60 + 300)
-        }, 100)
-      }, currentSentence.length * 60 + 400) // Faster timing
-
-    } else {
-      // Test complete
-      setTestStarted(false)
-      setIsRecording(false)
-
-      // Log all Whisper transcriptions for data collection
-      console.log('=== COMPLETE WHISPER TRANSCRIPTION DATA ===')
-      console.log('Final Whisper Data:', whisperTranscriptions)
-      console.log('Total Sentences:', whisperTranscriptions.length)
-
-      alert(`Test Complete! Score: ${totalCorrect}/${totalWords}`)
-    }
-  }
-
   const startTest = () => {
+    // Initialize the assessment with sentences
+    const testChunks = createTestChunks(passage)
+    if (testChunks.length > 0) {
+      const randomChunkIndex = Math.floor(Math.random() * testChunks.length)
+      const selectedThirtyWords = testChunks[randomChunkIndex]
+      const sentenceChunks = createSentences(selectedThirtyWords)
+
+      initializeAssessment(sentenceChunks)
+    }
+
     setShowBeginButton(false)
     setShowCountdown(true)
     setCountdownNumber(5)
-    setCountdownExiting(false)
 
-    let currentNum = 5
+    // Simple countdown: 5, 4, 3, 2, 1, start
+    const countdown = [5, 4, 3, 2, 1]
+    let currentIndex = 0
 
-    const nextCountdownStep = () => {
-      if (currentNum <= 1) {
-        // Exit final number and end countdown
-        setCountdownExiting(true)
-        setTimeout(() => {
-          setShowCountdown(false)
-          setTestStarted(true)
-          startRecording()
-        }, 400)
+    const countdownInterval = setInterval(() => {
+      currentIndex++
+      if (currentIndex < countdown.length) {
+        setCountdownNumber(countdown[currentIndex])
       } else {
-        // Exit current number
-        setCountdownExiting(true)
-        setTimeout(() => {
-          // Move to next number
-          currentNum--
-          setCountdownNumber(currentNum)
-          setCountdownExiting(false)
-          // Schedule next step - show number then trigger next exit
-          setTimeout(nextCountdownStep, 800)
-        }, 400)
+        clearInterval(countdownInterval)
+        setShowCountdown(false)
+        setTestStarted(true)
+        startListening() // Start speech recognition
       }
-    }
+    }, 1000)
+  }
 
-    // Start the countdown sequence after showing 5 for 800ms
-    setTimeout(nextCountdownStep, 800)
+  const handleRecordingToggle = () => {
+    if (isListening) {
+      stopListening()
+    } else {
+      startListening()
+    }
+  }
+
+  const handleSaveResults = async () => {
+    if (isSaving || resultsSaved) return // Prevent multiple clicks
+
+    setIsSaving(true)
+
+    try {
+      // Simulate async save operation
+      await new Promise((resolve, reject) => {
+        setTimeout(() => {
+          // For now, always succeed. Later you can add real error handling
+          const success = Math.random() > 0.1 // 90% success rate for demo
+          if (success) {
+            resolve()
+          } else {
+            reject(new Error('Save failed'))
+          }
+        }, 2000) // 2 second loading
+      })
+
+      saveResults() // Call the actual save function
+
+      // Save to persistent storage with benchmark identifier
+      const benchmarkKey = currentBenchmark
+      const savedResults = {
+        ...savedBenchmarkResults,
+        [benchmarkKey]: {
+          ...benchmarkResults,
+          savedAt: new Date().toISOString(),
+          benchmarkType: benchmarkKey
+        }
+      }
+
+      setSavedBenchmarkResults(savedResults)
+      localStorage.setItem('savedBenchmarkResults', JSON.stringify(savedResults))
+
+      // Update completion status
+      setBenchmarkComplete(prev => ({
+        ...prev,
+        [benchmarkKey]: true
+      }))
+
+      setIsSaving(false)
+      setSaveSuccess(true)
+      setResultsSaved(true)
+
+      // Show confetti and then hide success state
+      setTimeout(() => {
+        setSaveSuccess(false)
+      }, 3000)
+
+    } catch (error) {
+      setIsSaving(false)
+      setShowSaveFailModal(true)
+    }
+  }
+
+  const handleRestartWithConfirm = () => {
+    if (benchmarkCompleted && !resultsSaved) {
+      // Show unsaved results confirmation
+      setPendingAction('restart')
+      setShowConfirmModal(true)
+    } else if (resultsSaved) {
+      // Show restart confirmation for saved results
+      setShowRestartConfirmModal(true)
+    } else {
+      executeRestart()
+    }
+  }
+
+  const handleReturnWithConfirm = () => {
+    if (benchmarkCompleted && !resultsSaved) {
+      setPendingAction('return')
+      setShowConfirmModal(true)
+    } else {
+      executeReturn()
+    }
+  }
+
+  const executeRestart = () => {
+    resetBenchmark()
+    setTestStarted(false)
+    setShowBeginButton(true)
+    setResultsSaved(false)
+    setIsSaving(false)
+    setSaveSuccess(false)
+    setShowSaveFailModal(false)
+    setShowRestartConfirmModal(false)
+
+    // Clear any saved results for this benchmark to allow a fresh start
+    const newSavedResults = { ...savedBenchmarkResults }
+    delete newSavedResults[currentBenchmark]
+    setSavedBenchmarkResults(newSavedResults)
+    localStorage.setItem('savedBenchmarkResults', JSON.stringify(newSavedResults))
+
+    // Update completion status
+    setBenchmarkComplete(prev => ({
+      ...prev,
+      [currentBenchmark]: false
+    }))
+
+    startTest()
+  }
+
+  const executeReturn = () => {
+    resetBenchmark()
+    setShowRecordingInterface(false)
+    setButtonsSlideOut(false)
+    setTestStarted(false)
+    setShowBeginButton(true)
+    setResultsSaved(false)
+    setIsSaving(false)
+    setSaveSuccess(false)
+    setShowSaveFailModal(false)
+    setShowRestartConfirmModal(false)
+    // Don't reset currentBenchmark - keep it for next time
+  }
+
+  const handleConfirmProceed = () => {
+    if (pendingAction === 'restart') {
+      executeRestart()
+    } else if (pendingAction === 'return') {
+      executeReturn()
+    }
+    setShowConfirmModal(false)
+    setPendingAction(null)
+  }
+
+  const handleConfirmCancel = () => {
+    setShowConfirmModal(false)
+    setPendingAction(null)
+  }
+
+  const handleRestartConfirmProceed = () => {
+    setShowRestartConfirmModal(false)
+    executeRestart()
+  }
+
+  const handleRestartConfirmCancel = () => {
+    setShowRestartConfirmModal(false)
+  }
+
+  // Get current sentence for display
+  const getCurrentSentence = () => {
+    if (!sentences.length || currentSentenceIndex >= sentences.length) {
+      return []
+    }
+    return sentences[currentSentenceIndex]
+  }
+
+  // Get word status for display
+  const getWordStatus = (globalWordIndex) => {
+    if (!wordStatuses.length || globalWordIndex >= wordStatuses.length) {
+      return 0 // unread
+    }
+    return wordStatuses[globalWordIndex]
+  }
+
+  // Calculate current global word index for highlighting
+  const getCurrentGlobalWordIndex = () => {
+    let globalIndex = 0
+    for (let i = 0; i < currentSentenceIndex; i++) {
+      globalIndex += sentences[i]?.length || 0
+    }
+    return globalIndex + (currentWordIndex - globalIndex)
   }
 
   const completedCount = Object.values(benchmarkComplete).filter(Boolean).length
   const allComplete = completedCount === 3
 
-  // Helper function to get all Whisper transcription data
-  const getWhisperData = () => {
-    return {
-      testResults: whisperTranscriptions,
-      totalScore: { correct: totalCorrect, total: totalWords },
-      passageUsed: selectedPassage,
-      testDate: new Date().toISOString()
-    }
-  }
-
-  // Make Whisper data accessible globally for debugging/export
-  window.getWhisperData = getWhisperData
-
   return (
     <div className={`App ${isDarkMode ? 'dark-mode' : ''}`}>
-
       <div className="dark-mode-toggle">
         <button
           className={`toggle-switch ${isDarkMode ? 'active' : ''}`}
@@ -536,12 +482,14 @@ function App() {
                   <span className="letter" style={{"--delay": "0.4s"}}>e</span>
                   <span className="letter" style={{"--delay": "0.5s"}}>d</span>
                   <span className="letter space" style={{"--delay": "0.6s"}}> </span>
-                  <span className="letter" style={{"--delay": "0.7s"}}>L</span>
-                  <span className="letter" style={{"--delay": "0.8s"}}>e</span>
-                  <span className="letter" style={{"--delay": "0.9s"}}>n</span>
-                  <span className="letter" style={{"--delay": "1.0s"}}>s</span>
-                  <span className="letter" style={{"--delay": "1.1s"}}>e</span>
-                  <span className="letter" style={{"--delay": "1.2s"}}>s</span>
+                  <span className="word-lenses">
+                    <span className="letter" style={{"--delay": "0.7s"}}>L</span>
+                    <span className="letter" style={{"--delay": "0.8s"}}>e</span>
+                    <span className="letter" style={{"--delay": "0.9s"}}>n</span>
+                    <span className="letter" style={{"--delay": "1.0s"}}>s</span>
+                    <span className="letter" style={{"--delay": "1.1s"}}>e</span>
+                    <span className="letter" style={{"--delay": "1.2s"}}>s</span>
+                  </span>
                 </span>
               </div>
               <div className="subtitle">
@@ -554,18 +502,16 @@ function App() {
                 >
                   BEGIN
                 </button>
-                <button className="action-button secondary">ABOUT</button>
-              </div>
-            </div>
-
-            <div className="letter-stream">
-              <div className="letter-grid">
-                <div className="letter-morph grid-1">b</div>
-                <div className="letter-morph grid-2">d</div>
-                <div className="letter-morph grid-3">p</div>
-                <div className="letter-morph grid-4">q</div>
-                <div className="grid-divider horizontal"></div>
-                <div className="grid-divider vertical"></div>
+                <button
+                  className="action-button secondary"
+                  onClick={() => {
+                    document.querySelector('.second-section').scrollIntoView({
+                      behavior: 'smooth'
+                    });
+                  }}
+                >
+                  LEARN MORE
+                </button>
               </div>
             </div>
           </section>
@@ -615,7 +561,7 @@ function App() {
                 className={`proceed-button ${allComplete ? 'enabled' : 'disabled'}`}
                 disabled={!allComplete}
               >
-                Proceed to GAI Analysis {completedCount}/3
+                Proceed with GAI Analysis {completedCount}/3
               </button>
             </div>
             <button
@@ -630,93 +576,243 @@ function App() {
 
       {showRecordingInterface && (
         <div className="test-interface">
-          {/* Persistent Back Button */}
-          <button
-            className="persistent-home-btn"
-            onClick={() => handlePageTransition('begin')}
-          >
-            ← BACK
-          </button>
+          {!benchmarkCompleted && (
+            <button
+              className="persistent-home-btn"
+              onClick={() => {
+                stopListening()
+                setShowRecordingInterface(false)
+                setButtonsSlideOut(false)
+                setTestStarted(false)
+                setShowBeginButton(true)
+              }}
+            >
+              ← BACK
+            </button>
+          )}
 
-          {/* Begin Button - Only visible initially */}
           {showBeginButton && (
             <button className="begin-benchmark-btn" onClick={startTest}>
               Begin Benchmark
             </button>
           )}
 
-          {/* Directional Countdown */}
           {showCountdown && (
-            <div
-              className={`directional-countdown countdown-${countdownNumber} ${
-                countdownExiting ? `countdown-exit-${countdownNumber}` : ''
-              }`}
-            >
+            <div className="simple-countdown">
               {countdownNumber}
             </div>
           )}
 
-          {/* Test Layout - Only visible during test */}
-          {testStarted && (
+          {testStarted && isAssessmentActive && !benchmarkCompleted && (
             <div className="test-layout">
-              {/* Fluency Score - Positioned on left */}
               <div className="fluency-score-text">
                 Fluency Score: {totalCorrect}/{totalWords}
+                <div className={`microphone-indicator ${noInputDetected ? 'no-input' : (isListening ? 'listening' : 'inactive')}`}>
+                  <svg viewBox="0 0 24 24" className="mic-icon">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5"/>
+                    <line x1="12" y1="19" x2="12" y2="23"/>
+                    <line x1="8" y1="23" x2="16" y2="23"/>
+                  </svg>
+                  {isListening && (
+                    <div className="audio-bars">
+                      <div className="audio-bar" style={{'--delay': '0ms'}}></div>
+                      <div className="audio-bar" style={{'--delay': '150ms'}}></div>
+                      <div className="audio-bar" style={{'--delay': '300ms'}}></div>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Words Section - Positioned in center */}
+              <div className="progress-indicator">
+                <div className="progress-line">
+                  {[0, 1, 2, 3, 4, 5].map((milestoneIndex) => {
+                    const isCompleted = currentSentenceIndex > milestoneIndex
+                    const isCurrent = currentSentenceIndex === milestoneIndex
+                    const wordsInCurrentSentence = Math.max(0, currentWordIndex - (currentSentenceIndex * 5))
+                    const progress = isCurrent ? wordsInCurrentSentence / 5 : 0
+
+                    // Calculate skipped words in this segment
+                    const segmentStartIndex = milestoneIndex * 5
+                    const segmentEndIndex = segmentStartIndex + 5
+                    const segmentStatuses = wordStatuses.slice(segmentStartIndex, segmentEndIndex)
+                    const skippedCount = segmentStatuses.filter(status => status === 3).length
+                    const skippedPercentage = (skippedCount / 5) * 100
+
+                    return (
+                      <div key={milestoneIndex} className="milestone-container">
+                        <div
+                          className="progress-segment"
+                          style={{
+                            '--progress': isCurrent ? `${progress * 100}%` : isCompleted ? '100%' : '0%'
+                          }}
+                        >
+                          {skippedCount > 0 && (
+                            <div
+                              className="progress-fill yellow"
+                              style={{
+                                width: `${skippedPercentage}%`
+                              }}
+                            />
+                          )}
+                        </div>
+                        <div className={`milestone ${isCompleted ? 'completed' : isCurrent ? 'current' : 'pending'}`}>
+                          {isCompleted && (
+                            <div className="milestone-check">
+                              <svg viewBox="0 0 24 24" className="check-circle">
+                                <circle cx="12" cy="12" r="10" className="check-circle-bg" />
+                                <path d="M9 12l2 2 4-4" className="check-mark" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
               <div className="words-section-positioned">
-                {sentences[currentSentenceIndex] && sentences[currentSentenceIndex].map((word, index) => {
-                  const rollOutKey = `out-${currentSentenceIndex}-${index}`
-                  const rollInKey = `in-${currentSentenceIndex}-${index}`
-                  const nextKey = `next-${currentSentenceIndex}-${index}`
-                  const isRollingOut = rollingWords.includes(rollOutKey)
-                  const isRollingIn = rollingWords.includes(rollInKey)
-                  const isNextSentence = rollingWords.includes(nextKey)
+                {getCurrentSentence().map((word, index) => {
+                  // Calculate correct global word index for this word
+                  const globalWordIndex = (currentSentenceIndex * 5) + index
+                  const status = getWordStatus(globalWordIndex)
+                  const isCurrent = globalWordIndex === currentWordIndex
 
                   return (
                     <span
                       key={`${currentSentenceIndex}-${index}`}
                       className={`test-word ${
-                        sentenceWordStatuses[index] === 1 ? 'correct' :
-                        sentenceWordStatuses[index] === 2 ? 'incorrect' :
-                        index === currentExpectedWordIndex ? 'current' : 'unread'
-                      } ${isRollingOut ? 'rolling-out' : ''} ${isRollingIn ? 'rolling-in' : ''} ${isNextSentence ? 'next-sentence' : ''}`}
+                        status === 1 ? 'correct' :
+                        status === 2 ? 'incorrect' :
+                        isCurrent ? 'current' : 'unread'
+                      }`}
                     >
                       {word}
                     </span>
                   )
                 })}
               </div>
+
+              <div className="benchmark-controls">
+                <button
+                  className={`action-button ${isListening ? 'secondary' : 'primary'}`}
+                  onClick={handleRecordingToggle}
+                >
+                  {isListening ? 'Pause Benchmark' : 'Continue Benchmark'}
+                </button>
+
+                <button
+                  className="action-button secondary"
+                  onClick={skipCurrentWord}
+                  disabled={!canSkipCurrentWord}
+                >
+                  <span className="button-content">
+                    Skip Word
+                    <span className="enter-key-hint">⏎</span>
+                  </span>
+                </button>
+              </div>
             </div>
           )}
 
-          {/* Debug Transcription */}
-          {transcribedText && (
+          {benchmarkCompleted && benchmarkResults && (
+            <div className="results-screen">
+              <div className="results-header">
+                <h2>Benchmark Complete!</h2>
+                <div className="final-score">
+                  Fluency Score: {benchmarkResults.fluencyScore.correct}/{benchmarkResults.fluencyScore.total} ({benchmarkResults.fluencyScore.percentage}%)
+                </div>
+              </div>
+
+              <div className="save-controls">
+                <button
+                  className="action-button secondary"
+                  onClick={handleRestartWithConfirm}
+                >
+                  Restart
+                </button>
+                <button
+                  className="action-button secondary"
+                  onClick={handleReturnWithConfirm}
+                >
+                  Return to Hub
+                </button>
+                <button
+                  className={`action-button primary ${(resultsSaved && !isSaving) ? 'disabled-save' : ''}`}
+                  onClick={handleSaveResults}
+                  disabled={resultsSaved && !isSaving}
+                >
+                  {isSaving ? (
+                    <div className="save-loading">
+                      <div className="loading-spinner"></div>
+                    </div>
+                  ) : saveSuccess ? (
+                    <div className="save-success">
+                      <span>Results Saved</span>
+                      <div className="confetti-container">
+                        <div className="confetti-piece"></div>
+                        <div className="confetti-piece"></div>
+                        <div className="confetti-piece"></div>
+                        <div className="confetti-piece"></div>
+                      </div>
+                    </div>
+                  ) : (
+                    'Save Results'
+                  )}
+                </button>
+              </div>
+
+              <div className="detailed-results">
+                <h3>Detailed Results (Debug):</h3>
+                <pre style={{
+                  background: '#f5f5f5',
+                  padding: '20px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  overflow: 'auto',
+                  maxHeight: '400px',
+                  textAlign: 'left'
+                }}>
+                  {JSON.stringify(benchmarkResults, null, 2)}
+                </pre>
+              </div>
+            </div>
+          )}
+
+          {/* Debug info */}
+          {(transcript || interimTranscript) && (
             <div className="transcription-debug" style={{position: 'absolute', bottom: '20px', left: '20px'}}>
-              <h4>Transcribed: </h4>
-              <p>{transcribedText}</p>
+              <h4>Speech:</h4>
+              <p><strong>Final:</strong> {transcript}</p>
+              <p><strong>Interim:</strong> {interimTranscript}</p>
+              <p><strong>Sentence:</strong> {currentSentenceIndex + 1} / {sentences.length}</p>
             </div>
           )}
         </div>
       )}
 
+      {/* Modals */}
       {showBenchmark1Modal && (
         <div className="modal-overlay" onClick={() => closeModal(setShowBenchmark1Modal)}>
           <div className={`benchmark-modal ${modalClosing ? 'modal-closing' : ''}`} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Benchmark 1 - Oral Reading Fluency Assessment</h2>
+              <h2>Benchmark 1 - Oral Reading Fluency</h2>
             </div>
 
             <div className="modal-content">
-              <div className="placeholder-image">
-                <div className="image-placeholder">Placeholder Image</div>
+              <div className="demo-simple">
+                <span className="demo-word completed">The</span>
+                <span className="demo-word completed">quick</span>
+                <span className="demo-word current">brown</span>
+                <span className="demo-word pending">fox</span>
+                <span className="demo-word pending">jumps</span>
               </div>
 
               <div className="separator-line"></div>
 
               <div className="test-description">
-                <p>Read a short passage aloud while we record your voice. We'll analyze your reading speed, accuracy, and fluency patterns. This test evaluates how smoothly you can decode and pronounce written words in context. Take your time and read naturally - there's no penalty for pausing or re-reading.</p>
+                <p>Read a 30-word passage aloud with real-time feedback. Each word you speak correctly will turn green, while incorrect words turn red. This benchmark measures your oral reading fluency through instant word-by-word recognition. Read naturally at your own pace - you can skip difficult words if needed.</p>
               </div>
             </div>
 
@@ -738,85 +834,106 @@ function App() {
         </div>
       )}
 
-      {showBenchmark2Modal && (
-        <div className="modal-overlay" onClick={() => closeModal(setShowBenchmark2Modal)}>
-          <div className={`benchmark-modal ${modalClosing ? 'modal-closing' : ''}`} onClick={(e) => e.stopPropagation()}>
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="modal-overlay" onClick={handleConfirmCancel}>
+          <div className={`benchmark-modal small-modal no-animation ${modalClosing ? 'modal-closing' : ''}`} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Benchmark 2 - Written Expression & Typing Analysis</h2>
+              <h2>Unsaved Results</h2>
             </div>
 
             <div className="modal-content">
-              <div className="placeholder-image">
-                <div className="image-placeholder">Placeholder Image</div>
-              </div>
-
-              <div className="separator-line"></div>
-
               <div className="test-description">
-                <p>Type a displayed passage as accurately as you can. We measure your typing patterns, error frequency, and how you handle letter sequences. This assessment looks for patterns in letter reversals, sequencing difficulties.</p>
+                <p>You have unsaved benchmark results. If you continue without saving, your progress will be lost. Would you like to proceed anyway?</p>
               </div>
             </div>
 
             <div className="modal-actions">
               <button
                 className="action-button secondary"
-                onClick={() => closeModal(setShowBenchmark2Modal)}
+                onClick={handleConfirmCancel}
               >
-                BACK
+                Back
               </button>
               <button
                 className="action-button primary"
-                onClick={() => {
-                  // TODO: Implement slide-up animation and test start
-                  console.log('Begin test 2')
-                }}
+                onClick={handleConfirmProceed}
               >
-                BEGIN
+                Proceed Without Saving
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {showBenchmark3Modal && (
-        <div className="modal-overlay" onClick={() => closeModal(setShowBenchmark3Modal)}>
-          <div className={`benchmark-modal ${modalClosing ? 'modal-closing' : ''}`} onClick={(e) => e.stopPropagation()}>
+      {/* Save Failure Modal */}
+      {showSaveFailModal && (
+        <div className="modal-overlay" onClick={() => setShowSaveFailModal(false)}>
+          <div className={`benchmark-modal small-modal no-animation ${modalClosing ? 'modal-closing' : ''}`} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Benchmark 3 - Rapid Visual Naming Assessment</h2>
+              <h2>Save Failed</h2>
             </div>
 
             <div className="modal-content">
-              <div className="placeholder-image">
-                <div className="image-placeholder">Placeholder Image</div>
-              </div>
-
-              <div className="separator-line"></div>
-
               <div className="test-description">
-                <p>Name displayed items (letters, numbers, colors, or objects) as quickly as possible from left to right, top to bottom. This measures how rapidly you can retrieve and verbalize visual information - a key skill linked to reading fluency. Speed matters, but so does accuracy.</p>
+                <p>Failed to save results. Please check your connection and try again.</p>
               </div>
             </div>
 
             <div className="modal-actions">
               <button
                 className="action-button secondary"
-                onClick={() => closeModal(setShowBenchmark3Modal)}
+                onClick={() => setShowSaveFailModal(false)}
               >
-                BACK
+                Back
               </button>
               <button
                 className="action-button primary"
                 onClick={() => {
-                  // TODO: Implement slide-up animation and test start
-                  console.log('Begin test 3')
+                  setShowSaveFailModal(false)
+                  handleSaveResults()
                 }}
               >
-                BEGIN
+                Try Again
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Restart Confirmation Modal */}
+      {showRestartConfirmModal && (
+        <div className="modal-overlay" onClick={handleRestartConfirmCancel}>
+          <div className={`benchmark-modal small-modal no-animation ${modalClosing ? 'modal-closing' : ''}`} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Restart Benchmark</h2>
+            </div>
+
+            <div className="modal-content">
+              <div className="test-description">
+                <p>Your current results are saved. Restarting will delete the saved results and replace them with new ones. Do you want to continue?</p>
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button
+                className="action-button secondary"
+                onClick={handleRestartConfirmCancel}
+              >
+                Back
+              </button>
+              <button
+                className="action-button primary"
+                onClick={handleRestartConfirmProceed}
+              >
+                Delete Save & Restart
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Other modals... */}
     </div>
   )
 }
