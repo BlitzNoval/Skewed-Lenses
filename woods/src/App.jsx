@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import './App.css'
 import OneInTen from './components/Globe'
+import PlasmaBackground from './components/PlasmaBackground'
 import useSpeechStore from './store/useSpeechStore'
 import useSpeechRecognition from './hooks/useSpeechRecognition'
 
@@ -10,13 +11,11 @@ function App() {
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [benchmarkComplete, setBenchmarkComplete] = useState({
     benchmark1: false,
-    benchmark2: false,
-    benchmark3: false
+    benchmark2: false
   })
   const [savedBenchmarkResults, setSavedBenchmarkResults] = useState({
     benchmark1: null,
-    benchmark2: null,
-    benchmark3: null
+    benchmark2: null
   })
   const [showBenchmark1Modal, setShowBenchmark1Modal] = useState(false)
   const [showBenchmark2Modal, setShowBenchmark2Modal] = useState(false)
@@ -41,6 +40,8 @@ function App() {
 
   // Speech recognition
   const { isListening, isSupported, startListening, stopListening } = useSpeechRecognition()
+
+  // Speech store
   const {
     currentSentenceIndex,
     currentWordIndex,
@@ -158,8 +159,7 @@ function App() {
           // Update completion status based on saved results
           setBenchmarkComplete({
             benchmark1: !!parsedResults.benchmark1,
-            benchmark2: !!parsedResults.benchmark2,
-            benchmark3: !!parsedResults.benchmark3
+            benchmark2: !!parsedResults.benchmark2
           })
         }
       } catch (error) {
@@ -182,6 +182,7 @@ function App() {
       console.log('Created sentences:', sentenceChunks)
     }
   }, [passage])
+
 
   const handlePageTransition = (page) => {
     setIsTransitioning(true)
@@ -221,8 +222,6 @@ function App() {
         setShowBenchmark1Modal(true)
       } else if (benchmarkKey === 'benchmark2') {
         setShowBenchmark2Modal(true)
-      } else if (benchmarkKey === 'benchmark3') {
-        setShowBenchmark3Modal(true)
       }
     }
   }
@@ -235,12 +234,25 @@ function App() {
     }, 150)
   }
 
+  const startBenchmark = (benchmarkType) => {
+    if (benchmarkType === 'benchmark1') {
+      startBenchmark1()
+    } else if (benchmarkType === 'benchmark2') {
+      startBenchmark2()
+    }
+  }
+
   const startBenchmark1 = () => {
     setShowBenchmark1Modal(false)
     setButtonsSlideOut(true)
     setTimeout(() => {
       setShowRecordingInterface(true)
     }, 800)
+  }
+
+  const startBenchmark2 = () => {
+    setShowBenchmark2Modal(false)
+    setCurrentPage('benchmark2')
   }
 
   const startTest = () => {
@@ -450,10 +462,11 @@ function App() {
   }
 
   const completedCount = Object.values(benchmarkComplete).filter(Boolean).length
-  const allComplete = completedCount === 3
+  const allComplete = completedCount === 2
 
   return (
-    <div className={`App ${isDarkMode ? 'dark-mode' : ''}`}>
+    <div className={`App ${isDarkMode ? 'dark-mode' : ''} ${currentPage === 'home' ? 'home-page' : ''}`}>
+      {currentPage === 'home' && <PlasmaBackground />}
       <div className="dark-mode-toggle">
         <button
           className={`toggle-switch ${isDarkMode ? 'active' : ''}`}
@@ -471,64 +484,73 @@ function App() {
 
       {currentPage === 'home' && (
         <>
-          <section className={`home-section ${isTransitioning ? 'slide-out-left' : 'slide-in-left'}`}>
-            <div className="logo-container">
-              <div className="logo-text shimmer-text">
-                <span>
-                  <span className="letter" style={{"--delay": "0s"}}>S</span>
-                  <span className="letter" style={{"--delay": "0.1s"}}>k</span>
-                  <span className="letter" style={{"--delay": "0.2s"}}>e</span>
-                  <span className="letter" style={{"--delay": "0.3s"}}>w</span>
-                  <span className="letter" style={{"--delay": "0.4s"}}>e</span>
-                  <span className="letter" style={{"--delay": "0.5s"}}>d</span>
-                  <span className="letter space" style={{"--delay": "0.6s"}}> </span>
-                  <span className="word-lenses">
-                    <span className="letter" style={{"--delay": "0.7s"}}>L</span>
-                    <span className="letter" style={{"--delay": "0.8s"}}>e</span>
-                    <span className="letter" style={{"--delay": "0.9s"}}>n</span>
-                    <span className="letter" style={{"--delay": "1.0s"}}>s</span>
-                    <span className="letter" style={{"--delay": "1.1s"}}>e</span>
-                    <span className="letter" style={{"--delay": "1.2s"}}>s</span>
-                  </span>
-                </span>
-              </div>
-              <div className="subtitle">
-                Dyslexia through the lens of generative AI
-              </div>
-              <div className="button-container">
-                <button
-                  className="action-button primary"
-                  onClick={() => handlePageTransition('begin')}
-                >
-                  BEGIN
-                </button>
-                <button
-                  className="action-button secondary"
-                  onClick={() => {
-                    document.querySelector('.second-section').scrollIntoView({
-                      behavior: 'smooth'
-                    });
-                  }}
-                >
-                  LEARN MORE
-                </button>
-              </div>
-            </div>
-          </section>
+    <section className={`home-section ${isTransitioning ? 'slide-out-left' : 'slide-in-left'}`}>
+      <div className="logo-container">
+        <div className="logo-text shimmer-text">
+<span>
+  <span className="letter" style={{"--delay": "0s"}}>T</span>
+  <span className="letter" style={{"--delay": "0.1s"}}>h</span>
+  <span className="letter" style={{"--delay": "0.2s"}}>e</span>
+  <span className="letter space" style={{"--delay": "0.3s"}}> </span>
 
-          <section className="second-section">
-            <div className="section-content">
-              <div className="text-block">
-                <h2>1 in 10 People Have Dyslexia</h2>
-                <p className="reference">Source: International Dyslexia Association</p>
-              </div>
-              <div className="globe-container">
-                <OneInTen />
-              </div>
-            </div>
-          </section>
-        </>
-      )}
+  <span className="letter" style={{"--delay": "0.4s"}}>A</span>
+  <span className="letter" style={{"--delay": "0.5s"}}>I</span>
+  <span className="letter space" style={{"--delay": "0.6s"}}> </span>
+
+  <span className="letter" style={{"--delay": "0.7s"}}>P</span>
+  <span className="letter" style={{"--delay": "0.8s"}}>e</span>
+  <span className="letter" style={{"--delay": "0.9s"}}>r</span>
+  <span className="letter" style={{"--delay": "1.0s"}}>s</span>
+  <span className="letter" style={{"--delay": "1.1s"}}>p</span>
+  <span className="letter" style={{"--delay": "1.2s"}}>e</span>
+  <span className="letter" style={{"--delay": "1.3s"}}>c</span>
+  <span className="letter" style={{"--delay": "1.4s"}}>t</span>
+  <span className="letter" style={{"--delay": "1.5s"}}>i</span>
+  <span className="letter" style={{"--delay": "1.6s"}}>v</span>
+  <span className="letter" style={{"--delay": "1.7s"}}>e</span>
+</span>
+
+
+
+
+        </div>
+        <div className="subtitle">
+        AI, Bias, and Access in Today’s World
+        </div>
+        <div className="button-container">
+          <button
+            className="action-button primary"
+            onClick={() => handlePageTransition('begin')}
+          >
+            BEGIN
+          </button>
+          <button
+            className="action-button secondary"
+            onClick={() => {
+              document.querySelector('.second-section').scrollIntoView({
+                behavior: 'smooth'
+              });
+            }}
+          >
+            MY MISSION
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section className="second-section">
+      <div className="section-content">
+        <div className="text-block">
+          <h2>1 in 10 People Have Dyslexia</h2>
+          <p className="reference">Source: International Dyslexia Association</p>
+        </div>
+        <div className="globe-container">
+          <OneInTen />
+        </div>
+      </div>
+    </section>
+  </>
+)}
 
       {currentPage === 'begin' && (
         <div className={`begin-page ${isTransitioning ? 'slide-out-right' : 'slide-in-right'}`}>
@@ -548,20 +570,13 @@ function App() {
                 <span>Benchmark 2</span>
                 <div className={`checkmark-circle ${benchmarkComplete.benchmark2 ? 'completed' : ''}`}>✓</div>
               </button>
-              <button
-                className="tool-button"
-                onClick={() => handleBenchmarkClick('benchmark3')}
-              >
-                <span>Benchmark 3</span>
-                <div className={`checkmark-circle ${benchmarkComplete.benchmark3 ? 'completed' : ''}`}>✓</div>
-              </button>
             </div>
             <div className={`proceed-section ${buttonsSlideOut ? 'slide-out' : ''}`}>
               <button
                 className={`proceed-button ${allComplete ? 'enabled' : 'disabled'}`}
                 disabled={!allComplete}
               >
-                Proceed with GAI Analysis {completedCount}/3
+                Proceed with GAI Analysis {completedCount}/2
               </button>
             </div>
             <button
@@ -569,6 +584,46 @@ function App() {
               onClick={() => handlePageTransition('home')}
             >
               ← HOME
+            </button>
+          </div>
+        </div>
+      )}
+
+      {currentPage === 'benchmark2' && (
+        <div className="benchmark2-interface">
+          <button
+            className="persistent-home-btn"
+            onClick={() => setCurrentPage('home')}
+          >
+            ← HOME
+          </button>
+
+          <div className="benchmark2-content">
+            <h1>Benchmark 2 - Rapid Word Recognition</h1>
+            <p>Coming Soon - This test will show words that you need to read quickly!</p>
+
+            {/* Placeholder for now */}
+            <div className="word-flash-area">
+              <div className="flash-word">EXAMPLE</div>
+            </div>
+
+            <button
+              className="primary-button"
+              onClick={() => {
+                // For now, just mark as completed and go home
+                setBenchmarkComplete(prev => ({ ...prev, benchmark2: true }))
+                setSavedBenchmarkResults(prev => ({
+                  ...prev,
+                  benchmark2: {
+                    score: 85,
+                    completedAt: new Date().toISOString(),
+                    benchmarkType: 'benchmark2'
+                  }
+                }))
+                setCurrentPage('home')
+              }}
+            >
+              Complete Test (Demo)
             </button>
           </div>
         </div>
@@ -607,20 +662,23 @@ function App() {
             <div className="test-layout">
               <div className="fluency-score-text">
                 Fluency Score: {totalCorrect}/{totalWords}
-                <div className={`microphone-indicator ${noInputDetected ? 'no-input' : (isListening ? 'listening' : 'inactive')}`}>
-                  <svg viewBox="0 0 24 24" className="mic-icon">
-                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
-                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5"/>
-                    <line x1="12" y1="19" x2="12" y2="23"/>
-                    <line x1="8" y1="23" x2="16" y2="23"/>
-                  </svg>
-                  {isListening && (
-                    <div className="audio-bars">
-                      <div className="audio-bar" style={{'--delay': '0ms'}}></div>
-                      <div className="audio-bar" style={{'--delay': '150ms'}}></div>
-                      <div className="audio-bar" style={{'--delay': '300ms'}}></div>
-                    </div>
-                  )}
+                <div className="audio-indicators">
+                  <div className={`microphone-indicator ${noInputDetected ? 'no-input' : (isListening ? 'listening' : 'inactive')}`}>
+                    <svg viewBox="0 0 24 24" className="mic-icon">
+                      <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                      <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5"/>
+                      <line x1="12" y1="19" x2="12" y2="23"/>
+                      <line x1="8" y1="23" x2="16" y2="23"/>
+                    </svg>
+                    {isListening && (
+                      <div className="audio-bars">
+                        <div className="audio-bar" style={{'--delay': '0ms'}}></div>
+                        <div className="audio-bar" style={{'--delay': '150ms'}}></div>
+                        <div className="audio-bar" style={{'--delay': '300ms'}}></div>
+                      </div>
+                    )}
+                  </div>
+
                 </div>
               </div>
 
@@ -763,25 +821,28 @@ function App() {
                 </button>
               </div>
 
-              <div className="detailed-results">
-                <h3>Detailed Results (Debug):</h3>
-                <pre style={{
-                  background: '#f5f5f5',
-                  padding: '20px',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                  overflow: 'auto',
-                  maxHeight: '400px',
-                  textAlign: 'left'
-                }}>
-                  {JSON.stringify(benchmarkResults, null, 2)}
-                </pre>
-              </div>
+              {/* Debug results - hidden in production */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="detailed-results">
+                  <h3>Detailed Results (Debug):</h3>
+                  <pre style={{
+                    background: '#f5f5f5',
+                    padding: '20px',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    overflow: 'auto',
+                    maxHeight: '400px',
+                    textAlign: 'left'
+                  }}>
+                    {JSON.stringify(benchmarkResults, null, 2)}
+                  </pre>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Debug info */}
-          {(transcript || interimTranscript) && (
+          {/* Debug info - hidden in production */}
+          {process.env.NODE_ENV === 'development' && (transcript || interimTranscript) && (
             <div className="transcription-debug" style={{position: 'absolute', bottom: '20px', left: '20px'}}>
               <h4>Speech:</h4>
               <p><strong>Final:</strong> {transcript}</p>
@@ -802,17 +863,26 @@ function App() {
 
             <div className="modal-content">
               <div className="demo-simple">
-                <span className="demo-word completed">The</span>
-                <span className="demo-word completed">quick</span>
-                <span className="demo-word current">brown</span>
-                <span className="demo-word pending">fox</span>
-                <span className="demo-word pending">jumps</span>
+                <div className="demo-states">
+                  <div className="demo-state">
+                    <span className="demo-word current">speaking</span>
+                    <div className="demo-label">current word</div>
+                  </div>
+                  <div className="demo-state">
+                    <span className="demo-word completed">correct</span>
+                    <div className="demo-label">correct</div>
+                  </div>
+                  <div className="demo-state">
+                    <span className="demo-word incorrect">wrong</span>
+                    <div className="demo-label">incorrect</div>
+                  </div>
+                </div>
               </div>
 
               <div className="separator-line"></div>
 
               <div className="test-description">
-                <p>Read a 30-word passage aloud with real-time feedback. Each word you speak correctly will turn green, while incorrect words turn red. This benchmark measures your oral reading fluency through instant word-by-word recognition. Read naturally at your own pace - you can skip difficult words if needed.</p>
+                <p>You'll read 6 sentences (5 words each) from a passage. Each word turns blue when you speak it, then green if correct or yellow if incorrect. After each sentence, there's a brief pause before the next one appears. Read naturally and skip words if needed.</p>
               </div>
             </div>
 
@@ -828,6 +898,51 @@ function App() {
                 onClick={startBenchmark1}
               >
                 BEGIN
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Benchmark 2 Modal */}
+      {showBenchmark2Modal && (
+        <div className="modal-overlay" onClick={() => closeModal(setShowBenchmark2Modal)}>
+          <div className={`benchmark-modal ${modalClosing ? 'modal-closing' : ''}`} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Benchmark 2 - Rapid Word Recognition</h2>
+            </div>
+
+            <div className="modal-content">
+              <div className="demo-simple">
+                <div className="demo-states">
+                  <div className="demo-state">
+                    <span className="demo-word current">FLASH</span>
+                    <div className="demo-label">word appears</div>
+                  </div>
+                  <div className="demo-state">
+                    <span className="demo-word completed">✓ SAID</span>
+                    <div className="demo-label">you say it</div>
+                  </div>
+                  <div className="demo-state">
+                    <span className="demo-word current">NEXT</span>
+                    <div className="demo-label">next word</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="separator-line"></div>
+
+              <div className="test-description">
+                <p>Words will flash on screen one at a time. Say each word as quickly as you can when it appears. The faster you recognize and say the words, the better your score. You'll see 20 words total - some easy, some challenging.</p>
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button className="secondary-button" onClick={() => closeModal(setShowBenchmark2Modal)}>
+                Cancel
+              </button>
+              <button className="primary-button" onClick={() => startBenchmark('benchmark2')}>
+                Begin Test
               </button>
             </div>
           </div>

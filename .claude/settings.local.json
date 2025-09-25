@@ -38,7 +38,11 @@
       "Bash(git reset:*)",
       "Bash(npx:*)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:speech.milind.app)"
+      "WebFetch(domain:speech.milind.app)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(sudo apt-get install:*)",
+      "Bash(nvm:*)",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": []

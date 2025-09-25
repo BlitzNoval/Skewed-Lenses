@@ -21,6 +21,11 @@ const useSpeechStore = create(devtools((set, get) => ({
   benchmarkResults: null, // Stores final results for saving
   speechLog: [], // Stores all speech attempts for error tracking
 
+  // Timing state for WPM calculations
+  testStartTime: null,
+  currentSentenceStartTime: null,
+  wordStartTime: null, // When current word recognition began
+
   // Recognition instance
   recognition: null,
 
@@ -37,6 +42,7 @@ const useSpeechStore = create(devtools((set, get) => ({
   // Assessment actions
   initializeAssessment: (sentences) => {
     const totalWords = sentences.reduce((total, sentence) => total + sentence.length, 0)
+    const now = Date.now()
     set({
       sentences,
       totalWords,
@@ -47,7 +53,11 @@ const useSpeechStore = create(devtools((set, get) => ({
       isAssessmentActive: true,
       transcript: '',
       interimTranscript: '',
-      speechLog: []
+      speechLog: [],
+      // Initialize timing
+      testStartTime: now,
+      currentSentenceStartTime: now,
+      wordStartTime: null
     })
   },
 
@@ -58,6 +68,7 @@ const useSpeechStore = create(devtools((set, get) => ({
     const currentSentence = state.sentences[state.currentSentenceIndex]
     if (!currentSentence) return
 
+    const now = Date.now()
     const words = spokenText.toLowerCase().trim().split(/\s+/).filter(w => w.length > 0)
     let { currentWordIndex, wordStatuses, totalCorrect, speechLog } = state
     const newWordStatuses = [...wordStatuses]
@@ -67,6 +78,12 @@ const useSpeechStore = create(devtools((set, get) => ({
     // Calculate current position within current sentence
     const sentenceStartIndex = state.currentSentenceIndex * 5
     let wordIndexInSentence = currentWordIndex - sentenceStartIndex
+
+    // Set word start time if not set
+    let wordStartTime = state.wordStartTime
+    if (!wordStartTime) {
+      wordStartTime = now
+    }
 
     words.forEach(spokenWord => {
       // Stop if we've completed current sentence (5 words)
@@ -82,7 +99,7 @@ const useSpeechStore = create(devtools((set, get) => ({
                       (expectedWord.startsWith(cleanSpoken.slice(0, 3)) ||
                        cleanSpoken.startsWith(expectedWord.slice(0, 3))))
 
-      // Log this speech attempt
+      // Log this speech attempt with timing data
       newSpeechLog.push({
         timestamp: new Date().toISOString(),
         sentenceIndex: state.currentSentenceIndex,
@@ -92,7 +109,13 @@ const useSpeechStore = create(devtools((set, get) => ({
         spokenWord: cleanSpoken,
         originalSpoken: spokenWord,
         isCorrect: isMatch,
-        fullTranscript: spokenText
+        fullTranscript: spokenText,
+        // Timing data for WPM analysis
+        wordStartTime: wordStartTime,
+        wordEndTime: now,
+        wordDuration: now - wordStartTime,
+        sentenceStartTime: state.currentSentenceStartTime,
+        testStartTime: state.testStartTime
       })
 
       newWordStatuses[currentWordIndex] = isMatch ? 1 : 2
@@ -115,7 +138,8 @@ const useSpeechStore = create(devtools((set, get) => ({
       wordStatuses: newWordStatuses,
       totalCorrect: newCorrect,
       canSkipCurrentWord: canSkip,
-      speechLog: newSpeechLog
+      speechLog: newSpeechLog,
+      wordStartTime: null // Reset for next word
     })
 
     // Check if current sentence is complete (5 words per sentence)
@@ -142,12 +166,15 @@ const useSpeechStore = create(devtools((set, get) => ({
     const state = get()
     if (!state.canSkipCurrentWord) return
 
+    const now = Date.now()
+
     // Log the skip action
     const currentSentence = state.sentences[state.currentSentenceIndex]
     const sentenceStartIndex = state.currentSentenceIndex * 5
     const wordIndexInSentence = state.currentWordIndex - sentenceStartIndex
     const expectedWord = currentSentence[wordIndexInSentence]?.toLowerCase().replace(/[.,!?;]/g, '') || ''
 
+    const wordStartTime = state.wordStartTime || now
     const newSpeechLog = [...state.speechLog]
     newSpeechLog.push({
       timestamp: new Date().toISOString(),
@@ -159,7 +186,13 @@ const useSpeechStore = create(devtools((set, get) => ({
       originalSpoken: '[SKIPPED]',
       isCorrect: false,
       fullTranscript: '[WORD SKIPPED BY USER]',
-      wasSkipped: true
+      wasSkipped: true,
+      // Timing data for WPM analysis
+      wordStartTime: wordStartTime,
+      wordEndTime: now,
+      wordDuration: now - wordStartTime,
+      sentenceStartTime: state.currentSentenceStartTime,
+      testStartTime: state.testStartTime
     })
 
     const newWordIndex = state.currentWordIndex + 1
@@ -170,7 +203,8 @@ const useSpeechStore = create(devtools((set, get) => ({
       currentWordIndex: newWordIndex,
       canSkipCurrentWord: false, // Hide skip button after skipping
       speechLog: newSpeechLog,
-      wordStatuses: newWordStatuses
+      wordStatuses: newWordStatuses,
+      wordStartTime: null // Reset for next word
     })
 
     console.log(`⏭️ Skipped word ${state.currentWordIndex}, moving to word ${newWordIndex}`)
@@ -193,14 +227,90 @@ const useSpeechStore = create(devtools((set, get) => ({
   moveToNextSentence: () => {
     const state = get()
     if (state.currentSentenceIndex < state.sentences.length - 1) {
-      set({ currentSentenceIndex: state.currentSentenceIndex + 1 })
+      set({
+        currentSentenceIndex: state.currentSentenceIndex + 1,
+        currentSentenceStartTime: Date.now(), // Reset sentence timing
+        wordStartTime: null // Reset word timing
+      })
       return true
     }
     return false
   },
 
+  // WPM Calculation Functions
+  calculateSentenceWPM: (sentenceIndex) => {
+    const state = get()
+    const sentenceLogs = state.speechLog.filter(log => log.sentenceIndex === sentenceIndex)
+    if (sentenceLogs.length === 0) return 0
+
+    const correctWords = sentenceLogs.filter(log => log.isCorrect).length
+    if (correctWords === 0) return 0
+
+    // Get sentence start and end times
+    const sentenceStart = sentenceLogs[0]?.sentenceStartTime
+    const sentenceEnd = sentenceLogs[sentenceLogs.length - 1]?.wordEndTime
+
+    if (!sentenceStart || !sentenceEnd) return 0
+
+    const durationMinutes = (sentenceEnd - sentenceStart) / (1000 * 60)
+    return durationMinutes > 0 ? Math.round((correctWords / durationMinutes) * 10) / 10 : 0
+  },
+
+  calculateOverallWPM: () => {
+    const state = get()
+    const correctLogs = state.speechLog.filter(log => log.isCorrect)
+    if (correctLogs.length === 0) return 0
+
+    const testStart = state.testStartTime
+    const testEnd = correctLogs[correctLogs.length - 1]?.wordEndTime || Date.now()
+
+    if (!testStart) return 0
+
+    // Calculate total time excluding 2-second sentence delays
+    const totalSentences = Math.max(1, state.currentSentenceIndex + 1)
+    const sentenceDelays = Math.max(0, totalSentences - 1) * 2000 // 2 seconds per delay
+    const totalDuration = (testEnd - testStart) - sentenceDelays
+    const durationMinutes = totalDuration / (1000 * 60)
+
+    return durationMinutes > 0 ? Math.round((correctLogs.length / durationMinutes) * 10) / 10 : 0
+  },
+
+  calculateDetailedWPMMetrics: () => {
+    const state = get()
+    const sentenceWPMs = []
+
+    // Calculate per-sentence WPMs
+    for (let i = 0; i < state.sentences.length; i++) {
+      sentenceWPMs.push(get().calculateSentenceWPM(i))
+    }
+
+    const overallWPM = get().calculateOverallWPM()
+    const averageWPM = sentenceWPMs.length > 0 ?
+      Math.round((sentenceWPMs.reduce((sum, wpm) => sum + wpm, 0) / sentenceWPMs.length) * 10) / 10 : 0
+
+    return {
+      overallWPM,
+      averageWPM,
+      sentenceWPMs,
+      totalCorrectWords: state.speechLog.filter(log => log.isCorrect).length,
+      totalTestDuration: Date.now() - (state.testStartTime || Date.now()),
+      wpmCalculationDetails: {
+        testStartTime: state.testStartTime,
+        sentenceDelayAdjustment: Math.max(0, (state.currentSentenceIndex)) * 2000,
+        wordTimings: state.speechLog.map(log => ({
+          word: log.expectedWord,
+          duration: log.wordDuration,
+          isCorrect: log.isCorrect
+        }))
+      }
+    }
+  },
+
   completeAssessment: () => {
     const state = get()
+
+    // Calculate WPM metrics
+    const wpmMetrics = get().calculateDetailedWPMMetrics()
 
     // Create detailed results object
     const results = {
@@ -209,6 +319,7 @@ const useSpeechStore = create(devtools((set, get) => ({
         total: state.totalWords,
         percentage: Math.round((state.totalCorrect / state.totalWords) * 100)
       },
+      wpmMetrics,
       sentences: state.sentences,
       wordStatuses: state.wordStatuses,
       speechLog: state.speechLog,
@@ -269,18 +380,26 @@ const useSpeechStore = create(devtools((set, get) => ({
       totalCorrect: 0,
       transcript: '',
       interimTranscript: '',
-      speechLog: []
+      speechLog: [],
+      // Reset timing fields
+      testStartTime: null,
+      currentSentenceStartTime: null,
+      wordStartTime: null
     })
   },
 
   // Speech recognition management
   setRecognition: (recognition) => set({ recognition }),
 
+
   cleanup: () => {
     const { recognition } = get()
+
+    // Cleanup speech recognition
     if (recognition) {
       recognition.abort()
     }
+
     set({
       recognition: null,
       isListening: false,

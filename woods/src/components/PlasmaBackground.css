@@ -1,0 +1,65 @@
+/* Wrapper */
+.plasma-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  filter: blur(40px);
+  z-index: -1;
+  pointer-events: none;
+  transform: translate3d(0, 0, 0);
+}
+
+/* Base gradient styling */
+.gradient {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.75;
+  mix-blend-mode: screen;
+  will-change: transform, filter;
+  transform: translate3d(0, 0, 0) rotate(-45deg); /* Fixed 45° angle NW */
+  backface-visibility: hidden;
+}
+
+/* Frozen gradients, shifted left by 5% */
+.gradient-1 {
+  background: linear-gradient(135deg, #5aff82 0%, #33d96f 40%, #33e0ff 70%, #1aa65b 100%);
+  width: min(700px, 45vw);
+  height: min(350px, 22vh);
+  filter: blur(80px);
+  opacity: 0.88;
+  left: 70%; /* shifted 5% left */
+  top: 10%;
+  z-index: 3;
+}
+
+.gradient-2 {
+  background: linear-gradient(45deg, #7aff9c 0%, #44dca3 35%, #66e0ff 65%, #27a16d 100%);
+  width: min(600px, 40vw);
+  height: min(300px, 18vh);
+  filter: blur(60px);
+  opacity: 0.85;
+  left: 45%; /* shifted 5% left */
+  top: 80%;
+  z-index: 2;
+}
+
+.gradient-3 {
+  background: linear-gradient(60deg, #9bffc7 0%, #60dca2 40%, #5ddfff 70%, #38986e 100%);
+  width: min(500px, 35vw);
+  height: min(250px, 15vh);
+  filter: blur(50px);
+  opacity: 0.82;
+  left: 65%; /* shifted 5% left */
+  top: 50%;
+  z-index: 1;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .gradient-1 { width: min(550px, 65vw); height: min(270px, 20vh); left: 90%; top: 40%; filter: blur(60px); }
+  .gradient-2 { width: min(450px, 55vw); height: min(230px, 18vh); left: 85%; top: 60%; filter: blur(50px); }
+  .gradient-3 { width: min(400px, 45vw); height: min(180px, 15vh); left: 87%; top: 50%; filter: blur(40px); }
+}
