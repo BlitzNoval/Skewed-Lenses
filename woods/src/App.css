@@ -538,16 +538,16 @@
 }
 
 .proceed-button.enabled {
-  background: #2196F3;
+  background: #1a1a1a;
   color: #ffffff;
-  border: 2px solid #2196F3;
+  border: 2px solid #1a1a1a;
 }
 
 .proceed-button.enabled:hover {
-  background: #1976D2;
-  border-color: #1976D2;
+  background: #333;
+  border-color: #333;
   transform: translateY(-2px);
-  box-shadow: 4px 8px 0px rgba(33, 150, 243, 0.4);
+  box-shadow: 4px 8px 0px rgba(26, 26, 26, 0.4);
 }
 
 .back-button {
@@ -1421,7 +1421,7 @@
   background: #1a1a1a;
   color: #ffffff;
   position: absolute;
-  top: 50%;
+  top: 75%;
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 100;
@@ -2449,4 +2449,503 @@
   font-size: 18px;
   color: #666;
   margin-bottom: 15px;
+}
+
+/* ============================================= */
+/* BENCHMARK 2 - READING PACE ASSESSMENT STYLES */
+/* ============================================= */
+
+.benchmark2-interface {
+  min-height: 100vh;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #f8f8f8;
+  position: relative;
+}
+
+.benchmark2-start-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 600px;
+  margin-top: 5vh;
+}
+
+.benchmark2-start-screen h1 {
+  font-size: 2.5rem;
+  color: #333;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.benchmark2-start-screen > p {
+  font-size: 1.2rem;
+  color: #666;
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.controls-reminder {
+  background: #f9f9f9;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 3rem;
+  text-align: left;
+}
+
+.controls-reminder > div {
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.controls-reminder > div:last-child {
+  margin-bottom: 0;
+}
+
+.benchmark2-test-interface {
+  width: 100%;
+  max-width: 1000px;
+  margin-top: 2rem;
+}
+
+.benchmark2-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding: 1rem 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.timer-display {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+  font-family: 'SF Pro Display', monospace;
+}
+
+.progress-display {
+  font-size: 1.2rem;
+  color: #666;
+  font-weight: 500;
+}
+
+.reading-passage {
+  background: white;
+  padding: 3rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  line-height: 2.2;
+  font-size: 1.3rem;
+  margin-bottom: 2rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.passage-word {
+  margin-right: 0.3em;
+  transition: all 0.3s ease;
+  cursor: default;
+  display: inline;
+  position: relative;
+}
+
+.passage-word.unread-word {
+  color: #333;
+}
+
+.passage-word.current-word {
+  color: #007AFF;
+  font-weight: 700;
+  animation: currentWordPulse 1.5s infinite alternate;
+}
+
+.passage-word.correct-word {
+  color: #34C759;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.passage-word.skipped-word {
+  color: #FF9500;
+  font-weight: 600;
+  opacity: 0.7;
+}
+
+.passage-word.neutral-word {
+  color: #666;
+  opacity: 0.7;
+}
+
+@keyframes currentWordPulse {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+.benchmark2-controls-display {
+  display: flex;
+  justify-content: center;
+  gap: 3rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.control-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.key-indicator {
+  background: #333;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  min-width: 60px;
+  text-align: center;
+  font-family: monospace;
+}
+
+.control-item span:last-child {
+  font-size: 0.9rem;
+  color: #666;
+  text-align: center;
+}
+
+.benchmark2-results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3rem;
+  max-width: 800px;
+  margin-top: 2rem;
+}
+
+.benchmark2-results .results-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.benchmark2-results .results-header h2 {
+  font-size: 2.5rem;
+  color: #333;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 2rem;
+  width: 100%;
+  margin-bottom: 3rem;
+}
+
+.result-item {
+  background: white;
+  padding: 2rem;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.result-item:hover {
+  transform: translateY(-4px);
+}
+
+.result-value {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #007AFF;
+  margin-bottom: 0.5rem;
+}
+
+.result-label {
+  font-size: 1rem;
+  color: #666;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.benchmark2-actions {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.benchmark2-actions .action-button {
+  animation: none;
+  opacity: 1;
+  min-width: 140px;
+}
+
+/* Dark mode styles for Benchmark 2 */
+.App.dark-mode .benchmark2-interface {
+  background: #1a1a1a;
+}
+
+.App.dark-mode .benchmark2-start-screen h1 {
+  color: #ffffff;
+}
+
+.App.dark-mode .benchmark2-start-screen > p {
+  color: #cccccc;
+}
+
+.App.dark-mode .controls-reminder {
+  background: #2a2a2a;
+  border-color: #444;
+  color: #cccccc;
+}
+
+.App.dark-mode .benchmark2-header {
+  background: #2a2a2a;
+}
+
+.App.dark-mode .timer-display {
+  color: #ffffff;
+}
+
+.App.dark-mode .progress-display {
+  color: #cccccc;
+}
+
+.App.dark-mode .reading-passage {
+  background: #2a2a2a;
+  color: #ffffff;
+}
+
+.App.dark-mode .passage-word.unread-word {
+  color: #ffffff;
+}
+
+.App.dark-mode .benchmark2-controls-display {
+  background: #2a2a2a;
+}
+
+.App.dark-mode .control-item span:last-child {
+  color: #cccccc;
+}
+
+.App.dark-mode .result-item {
+  background: #2a2a2a;
+  color: #ffffff;
+}
+
+.App.dark-mode .result-label {
+  color: #cccccc;
+}
+
+.App.dark-mode .benchmark2-results .results-header h2 {
+  color: #ffffff;
+}
+
+/* AI Analysis Section */
+.ai-analysis-section {
+  width: 100%;
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #007AFF;
+}
+
+.ai-analysis-section h3 {
+  font-size: 1.4rem;
+  color: #007AFF;
+  margin-bottom: 1rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ai-analysis-section h3::before {
+  content: "🧠";
+  font-size: 1.2rem;
+}
+
+.ai-analysis-content {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #333;
+}
+
+.ai-analysis-content p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+/* Dark mode AI analysis */
+.App.dark-mode .ai-analysis-section {
+  background: #2a2a2a;
+  border-left-color: #007AFF;
+}
+
+.App.dark-mode .ai-analysis-section h3 {
+  color: #007AFF;
+}
+
+.App.dark-mode .ai-analysis-content {
+  color: #ffffff;
+}
+
+/* ============================================= */
+/* GAI ANALYSIS SYSTEM STYLES */
+/* ============================================= */
+
+.gai-analysis-loading {
+  position: fixed;
+  right: 400px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: white;
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  z-index: 1000;
+  border: 2px solid #000; /* changed from blue to black */
+}
+
+.gai-analysis-loading .loading-spinner {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto 1rem;
+}
+
+.gai-analysis-loading p {
+  margin: 0.5rem 0;
+  font-size: 1rem;
+  color: #333;
+}
+
+.gai-analysis-loading .model-name {
+  font-weight: 600;
+  color: #000; /* changed from blue to black */
+  font-size: 0.9rem;
+}
+
+.feedback-style-buttons {
+  position: fixed;
+  left: 500px;
+  top: 40%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  z-index: 1000;
+}
+
+.feedback-style-btn {
+  padding: 1rem 1.5rem;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+  min-width: 160px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.feedback-style-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.feedback-style-btn.active {
+  background: #000; /* active button black */
+  color: white;
+  border-color: #000;
+}
+
+.gai-results-panel {
+  position: fixed;
+  right: 50px;
+  top: 20%;
+  width: 800px;
+  max-height: 60vh;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 2px solid #000; /* border black */
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.gai-results-panel h3 {
+  background: #000; /* header black */
+  color: white;
+  margin: 0;
+  padding: 1rem 1.5rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.gai-results-panel .analysis-content {
+  padding: 1.5rem;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.gai-results-panel .analysis-content p {
+  margin: 0;
+  line-height: 1.6;
+  color: #333;
+  white-space: pre-wrap;
+}
+
+
+/* Dark mode GAI styles */
+.App.dark-mode .gai-analysis-loading {
+  background: #2a2a2a;
+  border-color: #007AFF;
+}
+
+.App.dark-mode .gai-analysis-loading p {
+  color: #ffffff;
+}
+
+.App.dark-mode .feedback-style-btn {
+  background: #2a2a2a;
+  border-color: #444;
+  color: #ffffff;
+}
+
+.App.dark-mode .feedback-style-btn:hover {
+  background: #333;
+}
+
+.App.dark-mode .gai-results-panel {
+  background: #2a2a2a;
+  border-color: #007AFF;
+}
+
+.App.dark-mode .gai-results-panel .analysis-content p {
+  color: #ffffff;
 }

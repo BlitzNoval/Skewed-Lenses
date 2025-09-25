@@ -144,6 +144,42 @@ Provide:
 - Dyslexia risk assessment (Low/Medium/High) based on reading errors
 - Specific patterns that suggest dyslexia vs. normal reading errors"""
 
+        elif mode == 'reading_pace':
+            # Reading pace assessment analysis
+            reading_metrics = data.get('readingMetrics', {})
+            wpm = reading_metrics.get('wordsPerMinute', 0)
+            skip_rate = reading_metrics.get('skipRate', 0)
+            completion_rate = reading_metrics.get('completionRate', 0)
+
+            prompt = f"""Analyze these reading pace metrics for potential dyslexia indicators:
+
+READING METRICS:
+- Words per minute: {wpm}
+- Skip rate: {skip_rate}%
+- Completion rate: {completion_rate}%
+- Total words attempted: {reading_metrics.get('totalWords', 0)}
+- Words marked correct: {reading_metrics.get('correctWords', 0)}
+- Time spent: {reading_metrics.get('timeElapsed', 0)} seconds
+
+Compare against typical reading speeds:
+- Average adult reading speed: 200-250 WPM
+- Slow reading (potential indicator): <150 WPM
+- High skip rate (potential indicator): >15%
+
+Please provide:
+1. Assessment of reading speed relative to typical ranges
+2. Analysis of skip patterns and what they might indicate
+3. Overall dyslexia risk assessment (Low/Medium/High) based on these metrics
+4. Recommendations for the user about potential next steps
+
+Be supportive and encouraging while providing helpful insights."""
+
+        elif mode == 'comprehensive_analysis':
+            # Comprehensive analysis of both benchmarks
+            combined_results = data.get('combinedResults', {})
+
+            prompt = text  # Use the full prompt provided from frontend
+
         else:
             # Free speech analysis (original prompt)
             prompt = f"""Analyze this speech transcript for potential dyslexia indicators. Look for:

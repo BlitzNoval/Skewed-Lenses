@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect } from 'react'
 import './App.css'
 import OneInTen from './components/Globe'
 import PlasmaBackground from './components/PlasmaBackground'
@@ -19,7 +19,6 @@ function App() {
   })
   const [showBenchmark1Modal, setShowBenchmark1Modal] = useState(false)
   const [showBenchmark2Modal, setShowBenchmark2Modal] = useState(false)
-  const [showBenchmark3Modal, setShowBenchmark3Modal] = useState(false)
   const [modalClosing, setModalClosing] = useState(false)
   const [showRecordingInterface, setShowRecordingInterface] = useState(false)
   const [buttonsSlideOut, setButtonsSlideOut] = useState(false)
@@ -37,6 +36,25 @@ function App() {
   const [currentBenchmark, setCurrentBenchmark] = useState('benchmark1')
   const [audioLevel, setAudioLevel] = useState(0)
   const [noInputDetected, setNoInputDetected] = useState(false)
+
+  // Benchmark 2 specific states
+  const [benchmark2Active, setBenchmark2Active] = useState(false)
+  const [benchmark2Timer, setBenchmark2Timer] = useState(120) // 2 minutes in seconds
+  const [benchmark2Words, setBenchmark2Words] = useState([])
+  const [benchmark2CurrentIndex, setBenchmark2CurrentIndex] = useState(0)
+  const [benchmark2WordStatuses, setBenchmark2WordStatuses] = useState([])
+  const [benchmark2Started, setBenchmark2Started] = useState(false)
+  const [benchmark2Completed, setBenchmark2Completed] = useState(false)
+  const [benchmark2Results, setBenchmark2Results] = useState(null)
+  const [benchmark2SaveLoading, setBenchmark2SaveLoading] = useState(false)
+  const [benchmark2SaveSuccess, setBenchmark2SaveSuccess] = useState(false)
+  const [benchmark2ResultsSaved, setBenchmark2ResultsSaved] = useState(false)
+
+  // GAI Analysis states
+  const [gaiAnalysisLoading, setGaiAnalysisLoading] = useState(false)
+  const [gaiAnalysisComplete, setGaiAnalysisComplete] = useState(false)
+  const [gaiAnalysisResults, setGaiAnalysisResults] = useState(null)
+  const [selectedFeedbackStyle, setSelectedFeedbackStyle] = useState('supportive')
 
   // Speech recognition
   const { isListening, isSupported, startListening, stopListening } = useSpeechRecognition()
@@ -62,7 +80,311 @@ function App() {
     resetBenchmark
   } = useSpeechStore()
 
-  // Keyboard event handler for Enter key
+  // Benchmark 2 helper functions - defined before useEffect hooks
+  const handleBenchmark2WordAction = (statusCode) => {
+    if (benchmark2CurrentIndex >= benchmark2Words.length) return
+
+    // Update word status
+    const newStatuses = [...benchmark2WordStatuses]
+    newStatuses[benchmark2CurrentIndex] = statusCode
+    setBenchmark2WordStatuses(newStatuses)
+
+    // Move to next word
+    const nextIndex = benchmark2CurrentIndex + 1
+    setBenchmark2CurrentIndex(nextIndex)
+
+    // Check if we've reached the end
+    if (nextIndex >= benchmark2Words.length) {
+      completeBenchmark2()
+    }
+  }
+
+  const completeBenchmark2 = async () => {
+    setBenchmark2Completed(true)
+    setBenchmark2Started(false)
+
+    // Calculate results
+    const totalWords = benchmark2CurrentIndex
+    const correctWords = benchmark2WordStatuses.slice(0, benchmark2CurrentIndex).filter(status => status === 1).length
+    const skippedWords = benchmark2WordStatuses.slice(0, benchmark2CurrentIndex).filter(status => status === 3).length
+    const timeElapsed = 120 - benchmark2Timer
+    const timeElapsedMinutes = Math.max(timeElapsed / 60, 0.1) // Minimum 0.1 minutes to avoid division by zero
+    const wordsPerMinute = Math.round(totalWords / timeElapsedMinutes)
+    const completionRate = Math.round((totalWords / benchmark2Words.length) * 100)
+    const skipRate = totalWords > 0 ? Math.round((skippedWords / totalWords) * 100) : 0
+
+    const results = {
+      totalWords,
+      correctWords,
+      skippedWords,
+      timeElapsed,
+      wordsPerMinute,
+      completionRate,
+      skipRate,
+      benchmarkType: 'benchmark2'
+    }
+
+    // Add AI analysis for reading pace assessment
+    try {
+      const aiAnalysis = await analyzeReadingPace(results)
+      results.aiAnalysis = aiAnalysis
+    } catch (error) {
+      console.error('AI analysis failed:', error)
+      results.aiAnalysis = null
+    }
+
+    setBenchmark2Results(results)
+  }
+
+  // AI analysis function for Benchmark 2
+  const analyzeReadingPace = async (results) => {
+    const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5001'
+
+    const analysisData = {
+      mode: 'reading_pace',
+      readingMetrics: {
+        wordsPerMinute: results.wordsPerMinute,
+        completionRate: results.completionRate,
+        skipRate: results.skipRate,
+        totalWords: results.totalWords,
+        correctWords: results.correctWords,
+        skippedWords: results.skippedWords,
+        timeElapsed: results.timeElapsed
+      },
+      text: `Reading assessment results: User read ${results.totalWords} words in ${results.timeElapsed} seconds (${results.wordsPerMinute} WPM), with ${results.skipRate}% skip rate and ${results.completionRate}% completion rate.`
+    }
+
+    const response = await fetch(`${API_URL}/analyze`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(analysisData),
+    })
+
+    if (!response.ok) {
+      throw new Error('AI analysis request failed')
+    }
+
+    const result = await response.json()
+    return result.analysis
+  }
+
+  const handleBenchmark2SaveResults = async () => {
+    if (benchmark2SaveLoading || benchmark2SaveSuccess) return
+
+    setBenchmark2SaveLoading(true)
+
+    try {
+      // Simulate async save operation like Benchmark 1
+      await new Promise((resolve, reject) => {
+        setTimeout(() => {
+          const success = Math.random() > 0.1 // 90% success rate
+          if (success) {
+            resolve()
+          } else {
+            reject(new Error('Save failed'))
+          }
+        }, 2000) // 2 second loading
+      })
+
+      // Save benchmark 2 results
+      const savedResults = {
+        ...savedBenchmarkResults,
+        benchmark2: {
+          ...benchmark2Results,
+          savedAt: new Date().toISOString()
+        }
+      }
+      setSavedBenchmarkResults(savedResults)
+      localStorage.setItem('savedBenchmarkResults', JSON.stringify(savedResults))
+      setBenchmarkComplete(prev => ({ ...prev, benchmark2: true }))
+
+      setBenchmark2SaveLoading(false)
+      setBenchmark2SaveSuccess(true)
+      setBenchmark2ResultsSaved(true)
+
+      // Show confetti and then navigate
+      setTimeout(() => {
+        setBenchmark2SaveSuccess(false)
+        setCurrentPage('begin')
+      }, 3000)
+
+    } catch (error) {
+      setBenchmark2SaveLoading(false)
+      // Could add error modal here like Benchmark 1
+    }
+  }
+
+  const handleBenchmark2RestartWithConfirm = () => {
+    if (benchmark2Completed && !benchmark2ResultsSaved) {
+      // Show unsaved results confirmation
+      setPendingAction('benchmark2-restart')
+      setShowConfirmModal(true)
+    } else if (benchmark2ResultsSaved) {
+      // Show restart confirmation for saved results
+      setShowRestartConfirmModal(true)
+    } else {
+      executeBenchmark2Restart()
+    }
+  }
+
+  const handleBenchmark2ReturnWithConfirm = () => {
+    if (benchmark2Completed && !benchmark2ResultsSaved) {
+      setPendingAction('benchmark2-return')
+      setShowConfirmModal(true)
+    } else {
+      executeBenchmark2Return()
+    }
+  }
+
+  const executeBenchmark2Restart = () => {
+    initializeBenchmark2()
+    setBenchmark2ResultsSaved(false)
+    setBenchmark2SaveLoading(false)
+    setBenchmark2SaveSuccess(false)
+    setShowRestartConfirmModal(false)
+  }
+
+  const executeBenchmark2Return = () => {
+    setBenchmark2ResultsSaved(false)
+    setBenchmark2SaveLoading(false)
+    setBenchmark2SaveSuccess(false)
+    setCurrentPage('begin')
+  }
+
+  // GAI Analysis function
+  const handleGAIAnalysis = async () => {
+    if (!allComplete || gaiAnalysisLoading) return
+
+    setGaiAnalysisLoading(true)
+
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5001'
+
+      // Combine both benchmark results
+      const combinedResults = {
+        benchmark1: savedBenchmarkResults.benchmark1,
+        benchmark2: savedBenchmarkResults.benchmark2
+      }
+
+      const analysisData = {
+        mode: 'comprehensive_analysis',
+        combinedResults,
+        text: `Comprehensive dyslexia screening analysis:
+
+BENCHMARK 1 (Oral Reading Fluency):
+- Fluency Score: ${combinedResults.benchmark1?.fluencyScore?.correct || 0}/${combinedResults.benchmark1?.fluencyScore?.total || 0} (${combinedResults.benchmark1?.fluencyScore?.percentage || 0}%)
+- Total Attempts: ${combinedResults.benchmark1?.errorAnalysis?.totalAttempts || 0}
+
+BENCHMARK 2 (Reading Pace Assessment):
+- Words Per Minute: ${combinedResults.benchmark2?.wordsPerMinute || 0}
+- Completion Rate: ${combinedResults.benchmark2?.completionRate || 0}%
+- Skip Rate: ${combinedResults.benchmark2?.skipRate || 0}%
+- Total Words Read: ${combinedResults.benchmark2?.totalWords || 0}
+
+ANALYZE FOR:
+- Reading fluency (speed, accuracy, rhythm) compared to expected norms.  
+- Word recognition patterns, including skips, substitutions, or decoding struggles.  
+- Phonological processing indicators, such as sound-symbol confusion, reversals, or mispronunciations.  
+- Working memory demands and signs of difficulty holding or recalling information.  
+- Sequence processing, noting whether errors appear systematic or inconsistent.  
+
+PROVIDE INSIGHTS ON:
+- Overall level of risk (Low / Medium / High) for dyslexia indicators.  
+- Key patterns and behaviors observed in the reading sample.  
+- How these patterns compare with commonly observed dyslexic reading profiles.  
+- The level of confidence or certainty in the interpretation.  
+- A clear reminder that this is a *screening perspective only*, not a diagnosis.  
+
+FORMAT RESPONSE WITH:
+- **Risk Level** stated clearly.  
+- **Key Indicators** presented as bullet points.  
+- **Analysis** in 2–3 sentences, but flexible enough to expand if needed.  
+- **Next Steps** with open suggestions for professional follow-up and possible support strategies.  
+- **Disclaimer** clarifying the limits of screening and encouraging professional evaluation if concerns remain.  
+]`
+      }
+
+      const response = await fetch(`${API_URL}/analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(analysisData),
+      })
+
+      if (!response.ok) {
+        throw new Error('GAI analysis request failed')
+      }
+
+      const baseResult = await response.json()
+
+ // Generate the three different feedback styles
+const styles = {
+  supportive: `Supportive/Encouraging Framing: 
+Layout your feedback as follows:
+0. **Start by making a bold, confident statement about the user’s unique learning strengths**, highlighting how these shape their approach to reading and problem-solving.  
+1. Start with a brief **summary of strengths** (what the user did well).
+2. Provide **examples of progress or effort** that stand out.
+3. Reframe any difficulties as **growth opportunities** with suggestions for how these areas could improve.
+4. End with a **positive reinforcement statement**, affirming unique strengths linked to reading differences.
+
+Analysis:
+${analysisData.text}`,
+
+  neutral: `Neutral/Clinical Framing: 
+Layout your feedback as follows:
+0. Start by making a bold, factual statement about the user’s reading profile**, summarizing the key characteristics that can be compared to norms.  
+1. Begin with an **objective summary of the results** (key performance measures).
+2. Provide **comparisons to established norms** where relevant.
+3. Describe **patterns and consistencies/deviations** in the data.
+4. Conclude with a **clear, factual summary** without interpretation or emotional language.
+
+Analysis:
+${analysisData.text}`,
+
+  deficit: `Deficit/Problem-Focused Framing: 
+Layout your feedback as follows:
+0. Start by making a bold, direct statement about the user’s reading challenges**, emphasizing the areas that most strongly suggest targeted support is needed.  
+1. Start with an **overview of key areas of difficulty** observed.
+2. List **specific performance gaps** or repeated errors with examples.
+3. Identify **potential underlying challenges** (e.g., fluency, decoding, comprehension).
+4. Conclude with a **recommendation for targeted intervention** to address these deficits.
+
+Analysis:
+${analysisData.text}`
+}
+
+
+
+      // Make separate requests for each style
+      const results = {}
+      for (const [style, prompt] of Object.entries(styles)) {
+        try {
+          const styleResponse = await fetch(`${API_URL}/analyze`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...analysisData, text: prompt })
+          })
+          const styleResult = await styleResponse.json()
+          results[style] = styleResult.analysis
+        } catch (error) {
+          results[style] = baseResult.analysis // Fallback
+        }
+      }
+
+      setGaiAnalysisResults(results)
+      setGaiAnalysisComplete(true)
+      setGaiAnalysisLoading(false)
+
+    } catch (error) {
+      console.error('GAI analysis failed:', error)
+      setGaiAnalysisLoading(false)
+    }
+  }
+
+  // Keyboard event handler for Enter key (Benchmark 1)
   useEffect(() => {
     const handleKeyPress = (event) => {
       if (event.key === 'Enter' && testStarted && isAssessmentActive && !benchmarkCompleted && canSkipCurrentWord) {
@@ -76,6 +398,51 @@ function App() {
       return () => document.removeEventListener('keydown', handleKeyPress)
     }
   }, [testStarted, isAssessmentActive, benchmarkCompleted, canSkipCurrentWord, skipCurrentWord])
+
+  // Keyboard event handler for Benchmark 2
+  useEffect(() => {
+    const handleBenchmark2KeyPress = (event) => {
+      if (!benchmark2Started || benchmark2Completed || benchmark2CurrentIndex >= benchmark2Words.length) {
+        return
+      }
+
+      event.preventDefault()
+
+      if (event.key === ' ') {
+        // Space = Mark as correct (green)
+        handleBenchmark2WordAction(1) // 1 = correct
+      } else if (event.key === 'Enter') {
+        // Enter = Skip word (yellow)
+        handleBenchmark2WordAction(3) // 3 = skipped
+      }
+    }
+
+    if (benchmark2Started && !benchmark2Completed && currentPage === 'benchmark2') {
+      document.addEventListener('keydown', handleBenchmark2KeyPress)
+      return () => document.removeEventListener('keydown', handleBenchmark2KeyPress)
+    }
+  }, [benchmark2Started, benchmark2Completed, benchmark2CurrentIndex, benchmark2Words.length, currentPage, handleBenchmark2WordAction])
+
+  // Benchmark 2 timer
+  useEffect(() => {
+    let timer
+    if (benchmark2Started && !benchmark2Completed && benchmark2Timer > 0) {
+      timer = setInterval(() => {
+        setBenchmark2Timer((prev) => {
+          if (prev <= 1) {
+            // Time's up
+            completeBenchmark2()
+            return 0
+          }
+          return prev - 1
+        })
+      }, 1000)
+    }
+
+    return () => {
+      if (timer) clearInterval(timer)
+    }
+  }, [benchmark2Started, benchmark2Completed, benchmark2Timer, completeBenchmark2])
 
   // No input detection for microphone status
   useEffect(() => {
@@ -119,6 +486,9 @@ function App() {
 
   const [selectedPassage] = useState(() => Math.floor(Math.random() * passages.length))
   const passage = passages[selectedPassage]
+
+  // Benchmark 2 reading passage
+  const benchmark2Passage = "Technology has transformed the way we communicate, work, and live our daily lives. From smartphones that connect us instantly to people across the globe, to artificial intelligence that helps us solve complex problems, we are living in an era of unprecedented digital advancement. However, this rapid technological progress also brings new challenges. Privacy concerns, digital addiction, and the digital divide between those who have access to technology and those who do not are important issues that society must address. Education systems are adapting to prepare students for a future where digital literacy is as important as traditional reading and writing skills. Healthcare is being revolutionized through telemedicine and AI-powered diagnostic tools. Environmental sustainability is being enhanced through smart city technologies and renewable energy innovations. As we move forward, it is crucial that we harness the benefits of technology while being mindful of its potential negative impacts on our society, relationships, and mental well-being."
 
   // Function to break passage into 30-word test chunks, then into 5-word sentences
   const createTestChunks = (passageText) => {
@@ -200,22 +570,30 @@ function App() {
       // Load the saved results and show the results screen directly
       const savedResult = savedBenchmarkResults[benchmarkKey]
 
-      // Set the speech store to the completed state with saved results
-      resetBenchmark()
-      // Use a setTimeout to ensure the reset happens first
-      setTimeout(() => {
-        // Manually set the benchmark as completed with the saved results
-        useSpeechStore.setState({
-          benchmarkCompleted: true,
-          benchmarkResults: savedResult
-        })
+      if (benchmarkKey === 'benchmark1') {
+        // Set the speech store to the completed state with saved results
+        resetBenchmark()
+        // Use a setTimeout to ensure the reset happens first
+        setTimeout(() => {
+          // Manually set the benchmark as completed with the saved results
+          useSpeechStore.setState({
+            benchmarkCompleted: true,
+            benchmarkResults: savedResult
+          })
 
-        setShowRecordingInterface(true)
-        setButtonsSlideOut(true)
-        setTestStarted(true)
-        setShowBeginButton(false) // Hide begin button for completed results
-        setResultsSaved(true) // Mark as already saved
-      }, 100)
+          setShowRecordingInterface(true)
+          setButtonsSlideOut(true)
+          setTestStarted(true)
+          setShowBeginButton(false) // Hide begin button for completed results
+          setResultsSaved(true) // Mark as already saved
+        }, 100)
+      } else if (benchmarkKey === 'benchmark2') {
+        // For Benchmark 2, set its completed state and show results
+        setBenchmark2Results(savedResult)
+        setBenchmark2Completed(true)
+        setBenchmark2Started(false)
+        setCurrentPage('benchmark2')
+      }
     } else {
       // Show the normal modal for starting a new benchmark
       if (benchmarkKey === 'benchmark1') {
@@ -253,6 +631,23 @@ function App() {
   const startBenchmark2 = () => {
     setShowBenchmark2Modal(false)
     setCurrentPage('benchmark2')
+    initializeBenchmark2()
+  }
+
+  // Benchmark 2 helper functions
+  const initializeBenchmark2 = () => {
+    const cleanedText = benchmark2Passage.replace(/[.,!?;:]/g, '')
+    const words = cleanedText.split(' ').filter(word => word.trim())
+    setBenchmark2Words(words)
+    setBenchmark2WordStatuses(new Array(words.length).fill(0)) // 0 = unread
+    setBenchmark2CurrentIndex(0)
+    setBenchmark2Timer(120) // 2 minutes
+    setBenchmark2Completed(false)
+    setBenchmark2Results(null)
+  }
+
+  const startBenchmark2Test = () => {
+    setBenchmark2Started(true)
   }
 
   const startTest = () => {
@@ -417,6 +812,10 @@ function App() {
       executeRestart()
     } else if (pendingAction === 'return') {
       executeReturn()
+    } else if (pendingAction === 'benchmark2-restart') {
+      executeBenchmark2Restart()
+    } else if (pendingAction === 'benchmark2-return') {
+      executeBenchmark2Return()
     }
     setShowConfirmModal(false)
     setPendingAction(null)
@@ -429,7 +828,11 @@ function App() {
 
   const handleRestartConfirmProceed = () => {
     setShowRestartConfirmModal(false)
-    executeRestart()
+    if (currentBenchmark === 'benchmark2') {
+      executeBenchmark2Restart()
+    } else {
+      executeRestart()
+    }
   }
 
   const handleRestartConfirmCancel = () => {
@@ -575,10 +978,44 @@ function App() {
               <button
                 className={`proceed-button ${allComplete ? 'enabled' : 'disabled'}`}
                 disabled={!allComplete}
+                onClick={handleGAIAnalysis}
               >
-                Proceed with GAI Analysis {completedCount}/2
+                {gaiAnalysisLoading ? 'Uploading...' : `Upload Results to GAI Model ${completedCount}/2`}
               </button>
             </div>
+            {/* GAI Analysis Loading */}
+            {gaiAnalysisLoading && (
+              <div className="gai-analysis-loading">
+                <div className="loading-spinner"></div>
+                <p>Waiting for AI model to analyze results...</p>
+                <p className="model-name">Groq Llama-3.1-8b-instant</p>
+              </div>
+            )}
+
+            {/* Feedback Style Buttons */}
+            {gaiAnalysisComplete && (
+              <div className="feedback-style-buttons">
+                <button
+                  className={`feedback-style-btn ${selectedFeedbackStyle === 'supportive' ? 'active' : ''}`}
+                  onClick={() => setSelectedFeedbackStyle('supportive')}
+                >
+                  Supportive Feedback
+                </button>
+                <button
+                  className={`feedback-style-btn ${selectedFeedbackStyle === 'neutral' ? 'active' : ''}`}
+                  onClick={() => setSelectedFeedbackStyle('neutral')}
+                >
+                  Neutral Feedback
+                </button>
+                <button
+                  className={`feedback-style-btn ${selectedFeedbackStyle === 'deficit' ? 'active' : ''}`}
+                  onClick={() => setSelectedFeedbackStyle('deficit')}
+                >
+                  Deficit Feedback
+                </button>
+              </div>
+            )}
+
             <button
               className="persistent-home-btn"
               onClick={() => handlePageTransition('home')}
@@ -586,46 +1023,174 @@ function App() {
               ← HOME
             </button>
           </div>
+
+          {/* GAI Analysis Results Display */}
+          {gaiAnalysisComplete && gaiAnalysisResults && (
+            <div className="gai-results-panel">
+              <h3>GAI Analysis Results</h3>
+              <div className="analysis-content">
+                <p>{gaiAnalysisResults[selectedFeedbackStyle]}</p>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {currentPage === 'benchmark2' && (
         <div className="benchmark2-interface">
-          <button
-            className="persistent-home-btn"
-            onClick={() => setCurrentPage('home')}
-          >
-            ← HOME
-          </button>
-
-          <div className="benchmark2-content">
-            <h1>Benchmark 2 - Rapid Word Recognition</h1>
-            <p>Coming Soon - This test will show words that you need to read quickly!</p>
-
-            {/* Placeholder for now */}
-            <div className="word-flash-area">
-              <div className="flash-word">EXAMPLE</div>
-            </div>
-
+          {!benchmark2Completed && (
             <button
-              className="primary-button"
+              className="persistent-home-btn"
               onClick={() => {
-                // For now, just mark as completed and go home
-                setBenchmarkComplete(prev => ({ ...prev, benchmark2: true }))
-                setSavedBenchmarkResults(prev => ({
-                  ...prev,
-                  benchmark2: {
-                    score: 85,
-                    completedAt: new Date().toISOString(),
-                    benchmarkType: 'benchmark2'
-                  }
-                }))
-                setCurrentPage('home')
+                setBenchmark2Started(false)
+                setBenchmark2Completed(false)
+                setCurrentPage('begin')
               }}
             >
-              Complete Test (Demo)
+              ← BACK
             </button>
-          </div>
+          )}
+
+          {!benchmark2Started && !benchmark2Completed && (
+            <div className="benchmark2-start-screen">
+              <h1>Benchmark 2 - Reading Pace Assessment</h1>
+              <p>Read through the paragraph using keyboard controls. You have 2 minutes.</p>
+              <div className="controls-reminder">
+                <div><strong>Space:</strong> Mark word as read correctly (green)</div>
+                <div><strong>Enter:</strong> Skip word (yellow)</div>
+              </div>
+              <button className="begin-benchmark-btn" onClick={startBenchmark2Test}>
+                Begin Reading Test
+              </button>
+            </div>
+          )}
+
+          {benchmark2Started && !benchmark2Completed && (
+            <div className="benchmark2-test-interface">
+              <div className="benchmark2-header">
+                <div className="timer-display">
+                  Time: {Math.floor(benchmark2Timer / 60)}:{(benchmark2Timer % 60).toString().padStart(2, '0')}
+                </div>
+                <div className="progress-display">
+                  Words: {benchmark2CurrentIndex}/{benchmark2Words.length}
+                </div>
+              </div>
+
+              <div className="reading-passage">
+                {benchmark2Words.map((word, index) => {
+                  const status = benchmark2WordStatuses[index]
+                  const isCurrent = index === benchmark2CurrentIndex
+                  const isRead = index < benchmark2CurrentIndex
+
+                  return (
+                    <span
+                      key={index}
+                      className={`passage-word ${
+                        isCurrent ? 'current-word' :
+                        status === 1 ? 'correct-word' :
+                        status === 3 ? 'skipped-word' :
+                        isRead ? 'neutral-word' : 'unread-word'
+                      }`}
+                    >
+                      {word}{' '}
+                    </span>
+                  )
+                })}
+              </div>
+
+              <div className="benchmark2-controls-display">
+                <div className="control-item">
+                  <span className="key-indicator">Space</span>
+                  <span>Correct (Green)</span>
+                </div>
+                <div className="control-item">
+                  <span className="key-indicator">Enter</span>
+                  <span>Skip (Yellow)</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {benchmark2Completed && benchmark2Results && (
+            <div className="benchmark2-results">
+              <div className="results-header">
+                <h2>Reading Assessment Complete!</h2>
+              </div>
+
+              <div className="results-grid">
+                <div className="result-item">
+                  <div className="result-value">{benchmark2Results.totalWords}</div>
+                  <div className="result-label">Words Read</div>
+                </div>
+                <div className="result-item">
+                  <div className="result-value">{benchmark2Results.correctWords}</div>
+                  <div className="result-label">Marked Correct</div>
+                </div>
+                <div className="result-item">
+                  <div className="result-value">{benchmark2Results.skippedWords}</div>
+                  <div className="result-label">Words Skipped</div>
+                </div>
+                <div className="result-item">
+                  <div className="result-value">{benchmark2Results.wordsPerMinute}</div>
+                  <div className="result-label">Words Per Minute</div>
+                </div>
+                <div className="result-item">
+                  <div className="result-value">{benchmark2Results.completionRate}%</div>
+                  <div className="result-label">Completion Rate</div>
+                </div>
+                <div className="result-item">
+                  <div className="result-value">{benchmark2Results.skipRate}%</div>
+                  <div className="result-label">Skip Rate</div>
+                </div>
+              </div>
+
+              {benchmark2Results.aiAnalysis && (
+                <div className="ai-analysis-section">
+                  <h3>Reading Pace Analysis</h3>
+                  <div className="ai-analysis-content">
+                    <p>{benchmark2Results.aiAnalysis}</p>
+                  </div>
+                </div>
+              )}
+
+              <div className="benchmark2-actions">
+                <button
+                  className="action-button secondary"
+                  onClick={handleBenchmark2RestartWithConfirm}
+                >
+                  Restart Test
+                </button>
+                <button
+                  className="action-button secondary"
+                  onClick={handleBenchmark2ReturnWithConfirm}
+                >
+                  Return to Hub
+                </button>
+                <button
+                  className="action-button primary"
+                  onClick={handleBenchmark2SaveResults}
+                >
+                  {benchmark2SaveLoading ? (
+                    <div className="save-loading">
+                      <div className="loading-spinner"></div>
+                    </div>
+                  ) : benchmark2SaveSuccess ? (
+                    <div className="save-success">
+                      <span>Results Saved</span>
+                      <div className="confetti-container">
+                        <div className="confetti-piece"></div>
+                        <div className="confetti-piece"></div>
+                        <div className="confetti-piece"></div>
+                        <div className="confetti-piece"></div>
+                      </div>
+                    </div>
+                  ) : (
+                    'Save Results'
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -783,6 +1348,25 @@ function App() {
                 </div>
               </div>
 
+              <div className="results-grid">
+                <div className="result-item">
+                  <div className="result-value">{benchmarkResults.fluencyScore.correct}</div>
+                  <div className="result-label">Words Correct</div>
+                </div>
+                <div className="result-item">
+                  <div className="result-value">{benchmarkResults.fluencyScore.total}</div>
+                  <div className="result-label">Total Words</div>
+                </div>
+                <div className="result-item">
+                  <div className="result-value">{benchmarkResults.fluencyScore.percentage}%</div>
+                  <div className="result-label">Accuracy</div>
+                </div>
+                <div className="result-item">
+                  <div className="result-value">{benchmarkResults.errorAnalysis?.totalAttempts || 0}</div>
+                  <div className="result-label">Total Attempts</div>
+                </div>
+              </div>
+
               <div className="save-controls">
                 <button
                   className="action-button secondary"
@@ -821,8 +1405,8 @@ function App() {
                 </button>
               </div>
 
-              {/* Debug results - hidden in production */}
-              {process.env.NODE_ENV === 'development' && (
+              {/* Debug results - hidden from users */}
+              {false && process.env.NODE_ENV === 'development' && (
                 <div className="detailed-results">
                   <h3>Detailed Results (Debug):</h3>
                   <pre style={{
@@ -841,8 +1425,8 @@ function App() {
             </div>
           )}
 
-          {/* Debug info - hidden in production */}
-          {process.env.NODE_ENV === 'development' && (transcript || interimTranscript) && (
+          {/* Debug info - hidden from users */}
+          {false && process.env.NODE_ENV === 'development' && (transcript || interimTranscript) && (
             <div className="transcription-debug" style={{position: 'absolute', bottom: '20px', left: '20px'}}>
               <h4>Speech:</h4>
               <p><strong>Final:</strong> {transcript}</p>
@@ -909,23 +1493,23 @@ function App() {
         <div className="modal-overlay" onClick={() => closeModal(setShowBenchmark2Modal)}>
           <div className={`benchmark-modal ${modalClosing ? 'modal-closing' : ''}`} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Benchmark 2 - Rapid Word Recognition</h2>
+              <h2>Benchmark 2 - Reading Pace Assessment</h2>
             </div>
 
             <div className="modal-content">
               <div className="demo-simple">
                 <div className="demo-states">
                   <div className="demo-state">
-                    <span className="demo-word current">FLASH</span>
-                    <div className="demo-label">word appears</div>
+                    <span className="demo-word current">reading</span>
+                    <div className="demo-label">current word</div>
                   </div>
                   <div className="demo-state">
-                    <span className="demo-word completed">✓ SAID</span>
-                    <div className="demo-label">you say it</div>
+                    <span className="demo-word completed">correct</span>
+                    <div className="demo-label">Space (correct)</div>
                   </div>
                   <div className="demo-state">
-                    <span className="demo-word current">NEXT</span>
-                    <div className="demo-label">next word</div>
+                    <span className="demo-word incorrect">skipped</span>
+                    <div className="demo-label">Enter (skip)</div>
                   </div>
                 </div>
               </div>
@@ -933,16 +1517,25 @@ function App() {
               <div className="separator-line"></div>
 
               <div className="test-description">
-                <p>Words will flash on screen one at a time. Say each word as quickly as you can when it appears. The faster you recognize and say the words, the better your score. You'll see 20 words total - some easy, some challenging.</p>
+                <p>Read through a paragraph at your own pace using keyboard controls. Spacebar marks words correct (green), Enter skips words (yellow). You have 2 minutes to read as much as possible.</p>
+                <div style={{marginTop: '10px', fontSize: '14px', color: '#666'}}>
+                  Controls: <strong>Space</strong> Correct | <strong>Enter</strong> Skip
+                </div>
               </div>
             </div>
 
             <div className="modal-actions">
-              <button className="secondary-button" onClick={() => closeModal(setShowBenchmark2Modal)}>
-                Cancel
+              <button
+                className="action-button secondary"
+                onClick={() => closeModal(setShowBenchmark2Modal)}
+              >
+                BACK
               </button>
-              <button className="primary-button" onClick={() => startBenchmark('benchmark2')}>
-                Begin Test
+              <button
+                className="action-button primary"
+                onClick={() => startBenchmark('benchmark2')}
+              >
+                BEGIN
               </button>
             </div>
           </div>

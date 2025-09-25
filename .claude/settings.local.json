@@ -42,7 +42,9 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(sudo apt-get install:*)",
       "Bash(nvm:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(./venv/Scripts/python.exe app.py)",
+      "Bash(wget:*)"
     ],
     "deny": [],
     "ask": []
