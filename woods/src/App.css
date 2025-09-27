@@ -2895,40 +2895,243 @@
   border-radius: 4px;
 }
 
-.gai-results-panel {
+.analysis-results-panel {
   position: fixed;
   right: 50px;
-  top: 20%;
-  width: 800px;
-  max-height: 60vh;
+  top: 15%;
+  width: 850px;
+  max-height: 70vh;
   background: white;
-  border-radius: 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  border: 2px solid #000; /* border black */
   z-index: 1000;
-  overflow: hidden;
-}
-
-.gai-results-panel h3 {
-  background: #000; /* header black */
-  color: white;
-  margin: 0;
-  padding: 1rem 1.5rem;
-  font-size: 1.2rem;
-  font-weight: 600;
-}
-
-.gai-results-panel .analysis-content {
-  padding: 1.5rem;
-  max-height: 50vh;
   overflow-y: auto;
 }
 
-.gai-results-panel .analysis-content p {
+.analysis-header {
+  background: linear-gradient(135deg, #007AFF 0%, #005BB5 100%);
+  color: white;
+  padding: 1.5rem 2rem;
+  border-radius: 12px 12px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.analysis-header h3 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.analysis-type-indicator {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.analysis-content {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Status Cards */
+.status-card, .metric-card, .risk-level-card, .confidence-card {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+  min-width: 150px;
+}
+
+.status-label, .metric-label, .risk-label, .confidence-label {
+  font-size: 0.8rem;
+  color: #6c757d;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.status-badge {
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  display: inline-block;
+}
+
+.status-badge.strong {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-badge.moderate, .status-badge.developing {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.status-badge.concerns {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.metric-value {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+/* Layout Rows */
+.metrics-row, .risk-header, .strengths-concerns-row {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.strengths-concerns-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+/* Section Styles */
+.findings-section, .evidence-section, .interpretation-section,
+.recommendations-section, .strengths-section, .concerns-section,
+.indicators-section, .next-steps-section {
+  background: #fbfcfd;
+  border: 1px solid #f0f1f3;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.findings-section h4, .evidence-section h4, .interpretation-section h4,
+.recommendations-section h4, .strengths-section h4, .concerns-section h4,
+.indicators-section h4, .next-steps-section h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: #333;
+  font-weight: 600;
+}
+
+/* Lists */
+.findings-list, .evidence-list, .recommendations-list,
+.strengths-list, .concerns-list, .indicators-list, .next-steps-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  list-style: none;
+}
+
+.findings-list li, .evidence-list li, .recommendations-list li,
+.strengths-list li, .concerns-list li, .indicators-list li, .next-steps-list li {
+  position: relative;
+  margin-bottom: 0.8rem;
+  line-height: 1.5;
+  color: #555;
+}
+
+.findings-list li::before, .evidence-list li::before, .indicators-list li::before {
+  content: "•";
+  color: #007AFF;
+  font-weight: 600;
+  position: absolute;
+  left: -1rem;
+}
+
+.recommendations-list li::before, .next-steps-list li::before {
+  content: "→";
+  color: #28a745;
+  font-weight: 600;
+  position: absolute;
+  left: -1rem;
+}
+
+.strengths-list li::before {
+  content: "✓";
+  color: #28a745;
+  font-weight: 600;
+  position: absolute;
+  left: -1rem;
+}
+
+.concerns-list li::before {
+  content: "!";
+  color: #dc3545;
+  font-weight: 600;
+  position: absolute;
+  left: -1rem;
+}
+
+/* Risk Badges */
+.risk-badge {
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  display: inline-block;
+}
+
+.risk-badge.low-risk {
+  background: #d4edda;
+  color: #155724;
+}
+
+.risk-badge.moderate-risk {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.risk-badge.high-risk, .risk-badge.comprehensive-evaluation-recommended {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.confidence-score {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #007AFF;
+}
+
+.timeline {
+  margin-top: 1rem;
+  padding: 0.8rem;
+  background: #e7f3ff;
+  border-left: 3px solid #007AFF;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+/* Interpretation Text */
+.interpretation-section p {
   margin: 0;
   line-height: 1.6;
-  color: #333;
+  color: #444;
+  font-style: italic;
+}
+
+/* Error Fallback */
+.error-fallback {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.error-fallback h4 {
+  margin: 0 0 1rem 0;
+  color: #6c757d;
+}
+
+.error-fallback p {
+  margin: 0;
   white-space: pre-wrap;
+  line-height: 1.5;
+  color: #555;
 }
 
 
@@ -2952,17 +3155,86 @@
   background: #333;
 }
 
-.App.dark-mode .gai-results-panel {
+.App.dark-mode .analysis-results-panel {
   background: #2a2a2a;
-  border-color: #007AFF;
+  border-color: #444;
 }
 
-.App.dark-mode .gai-results-panel .analysis-content p {
-  color: #ffffff;
+.App.dark-mode .analysis-header {
+  background: linear-gradient(135deg, #0066CC 0%, #004499 100%);
 }
 
-.App.dark-mode .analysis-description {
-  color: #bbb;
+.App.dark-mode .status-card,
+.App.dark-mode .metric-card,
+.App.dark-mode .risk-level-card,
+.App.dark-mode .confidence-card {
   background: #333;
+  border-color: #555;
+}
+
+.App.dark-mode .status-label,
+.App.dark-mode .metric-label,
+.App.dark-mode .risk-label,
+.App.dark-mode .confidence-label {
+  color: #bbb;
+}
+
+.App.dark-mode .metric-value {
+  color: #fff;
+}
+
+.App.dark-mode .findings-section,
+.App.dark-mode .evidence-section,
+.App.dark-mode .interpretation-section,
+.App.dark-mode .recommendations-section,
+.App.dark-mode .strengths-section,
+.App.dark-mode .concerns-section,
+.App.dark-mode .indicators-section,
+.App.dark-mode .next-steps-section {
+  background: #333;
+  border-color: #555;
+}
+
+.App.dark-mode .findings-section h4,
+.App.dark-mode .evidence-section h4,
+.App.dark-mode .interpretation-section h4,
+.App.dark-mode .recommendations-section h4,
+.App.dark-mode .strengths-section h4,
+.App.dark-mode .concerns-section h4,
+.App.dark-mode .indicators-section h4,
+.App.dark-mode .next-steps-section h4 {
+  color: #fff;
+}
+
+.App.dark-mode .findings-list li,
+.App.dark-mode .evidence-list li,
+.App.dark-mode .recommendations-list li,
+.App.dark-mode .strengths-list li,
+.App.dark-mode .concerns-list li,
+.App.dark-mode .indicators-list li,
+.App.dark-mode .next-steps-list li {
+  color: #ddd;
+}
+
+.App.dark-mode .interpretation-section p {
+  color: #ccc;
+}
+
+.App.dark-mode .timeline {
+  background: #1a3a5c;
   border-left-color: #007AFF;
+  color: #fff;
+}
+
+.App.dark-mode .error-fallback {
+  background: #333;
+  border-color: #555;
+}
+
+.App.dark-mode .error-fallback h4 {
+  color: #bbb;
+}
+
+.App.dark-mode .error-fallback p {
+  color: #ddd;
 }

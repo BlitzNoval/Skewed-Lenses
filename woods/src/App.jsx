@@ -318,103 +318,47 @@ FORMAT RESPONSE WITH:
 
  // Generate three dyslexia-specific analysis types
 const analysisTypes = {
-  phonological: `PHONOLOGICAL PROCESSING ANALYSIS
+  phonological: `You are a dyslexia screening specialist. Analyze this data and return ONLY a JSON response in this exact format:
 
-You are a dyslexia screening specialist analyzing speech and reading data for phonological processing indicators.
+ASSESSMENT DATA: ${analysisData.text}
 
-ASSESSMENT DATA:
-${analysisData.text}
+Return only valid JSON:
+{
+  "status": "Strong|Moderate|Concerns",
+  "keyFindings": ["Finding 1", "Finding 2", "Finding 3"],
+  "evidenceFound": ["Evidence 1", "Evidence 2"],
+  "interpretation": "Brief 1-2 sentence clinical interpretation",
+  "recommendations": ["Recommendation 1", "Recommendation 2"]
+}`,
 
-Provide a professional analysis using this structure:
+  fluency: `You are a dyslexia screening specialist. Analyze this reading fluency data and return ONLY a JSON response in this exact format:
 
-**PHONOLOGICAL PROCESSING PROFILE**
+ASSESSMENT DATA: ${analysisData.text}
 
-**Speech-to-Text Pattern Analysis:**
-- Analyze any letter/sound confusion patterns from the assessment data
-- Identify potential phonemic awareness gaps or sound substitution errors
-- Note any consonant blend or vowel sound processing difficulties
+Return only valid JSON:
+{
+  "status": "Strong|Developing|Concerns",
+  "readingSpeed": "Number WPM vs benchmark range",
+  "keyFindings": ["Finding 1", "Finding 2", "Finding 3"],
+  "automaticity": "Automatic|Compensatory|Effortful",
+  "interpretation": "Brief 1-2 sentence clinical interpretation",
+  "recommendations": ["Recommendation 1", "Recommendation 2"]
+}`,
 
-**Phonological Indicators:**
-- Rate phonological processing strength: Strong/Moderate/Concerns
-- List specific evidence from the data that supports this rating
-- Compare to typical dyslexia phonological markers
+  comprehensive: `You are a dyslexia screening specialist. Analyze this comprehensive assessment data and return ONLY a JSON response in this exact format:
 
-**Clinical Interpretation:**
-- Explain what these patterns suggest about underlying phonological processing
-- Connect findings to established dyslexia research on phonological deficits
+ASSESSMENT DATA: ${analysisData.text}
 
-**Recommendations:**
-- Suggest specific phonological awareness interventions if needed
-- Recommend further assessment areas related to phonological processing`,
-
-  fluency: `READING FLUENCY & AUTOMATICITY ANALYSIS
-
-You are a dyslexia screening specialist analyzing reading fluency and automaticity patterns.
-
-ASSESSMENT DATA:
-${analysisData.text}
-
-Provide a professional analysis using this structure:
-
-**READING FLUENCY PROFILE**
-
-**Speed & Automaticity Analysis:**
-- Compare reading speed to dyslexia benchmarks (Adult dyslexic avg: 120-150 WPM, Typical: 200-250 WPM)
-- Analyze skip patterns and hesitation indicators from the data
-- Assess reading automaticity vs compensatory strategy use
-
-**Fluency Indicators:**
-- Rate reading fluency: Strong/Developing/Concerns
-- Identify specific patterns suggesting automatic vs effortful reading
-- Note any word recognition vs decoding strategy patterns
-
-**Dyslexia-Specific Markers:**
-- Assess for typical dyslexic reading characteristics (slow but accurate, high skip rate, etc.)
-- Compare performance to established fluency screening criteria
-
-**Clinical Interpretation:**
-- Explain what these patterns suggest about reading development and potential dyslexia
-- Connect to research on dyslexic reading profiles
-
-**Intervention Planning:**
-- Suggest fluency-building strategies appropriate for the observed profile
-- Recommend reading support approaches based on automaticity level`,
-
-  comprehensive: `COMPREHENSIVE DYSLEXIA RISK ASSESSMENT
-
-You are a dyslexia screening specialist providing a comprehensive risk assessment using multi-benchmark data.
-
-ASSESSMENT DATA:
-${analysisData.text}
-
-Provide a professional analysis using this structure:
-
-**DYSLEXIA SCREENING SUMMARY**
-
-**Multi-Factor Analysis:**
-- Synthesize findings from both oral reading fluency and reading pace assessments
-- Identify converging evidence patterns across multiple assessment areas
-- Note any protective factors or compensatory strengths observed
-
-**Risk Assessment:**
-- Overall dyslexia screening result: Low Risk/Moderate Risk/High Risk/Recommend Comprehensive Evaluation
-- Provide specific evidence from the data supporting this classification
-- Compare to established dyslexia screening criteria and cut-off scores
-
-**Strength-Based Profile:**
-- Identify cognitive and reading strengths observed in the assessment
-- Note any advanced vocabulary, comprehension, or reasoning abilities
-- Highlight potential areas of giftedness that may mask reading difficulties
-
-**Evidence-Based Recommendations:**
-- Provide specific next steps based on the risk level identified
-- Suggest appropriate accommodations or interventions for the educational setting
-- Recommend timeline for follow-up assessment or monitoring
-
-**Professional Guidance:**
-- Clarify the limitations of screening vs comprehensive diagnostic evaluation
-- Provide guidance on when to seek formal dyslexia assessment
-- Include supportive resources for understanding dyslexia profiles`
+Return only valid JSON:
+{
+  "riskLevel": "Low Risk|Moderate Risk|High Risk|Comprehensive Evaluation Recommended",
+  "confidenceScore": "Percentage (e.g., '85%')",
+  "strengths": ["Strength 1", "Strength 2"],
+  "concerns": ["Concern 1", "Concern 2"],
+  "keyIndicators": ["Indicator 1", "Indicator 2", "Indicator 3"],
+  "nextSteps": ["Step 1", "Step 2"],
+  "timeline": "Recommended follow-up timeline"
+}`
 }
 
 
@@ -1087,22 +1031,181 @@ Provide a professional analysis using this structure:
 
           {/* Dyslexia Analysis Results Display */}
           {gaiAnalysisComplete && gaiAnalysisResults && (
-            <div className="gai-results-panel">
-              <h3>Dyslexia Screening Analysis</h3>
-              <div className="analysis-type-description">
-                {selectedAnalysisType === 'phonological' && (
-                  <p className="analysis-description">Analysis of speech-to-text patterns for phonological processing indicators</p>
-                )}
-                {selectedAnalysisType === 'fluency' && (
-                  <p className="analysis-description">Assessment of reading speed, automaticity, and fluency markers</p>
-                )}
-                {selectedAnalysisType === 'comprehensive' && (
-                  <p className="analysis-description">Multi-factor risk assessment with evidence-based recommendations</p>
-                )}
+            <div className="analysis-results-panel">
+              <div className="analysis-header">
+                <h3>Dyslexia Screening Analysis</h3>
+                <div className="analysis-type-indicator">
+                  {selectedAnalysisType === 'phonological' && 'Phonological Processing'}
+                  {selectedAnalysisType === 'fluency' && 'Reading Fluency Assessment'}
+                  {selectedAnalysisType === 'comprehensive' && 'Risk Assessment'}
+                </div>
               </div>
-              <div className="analysis-content">
-                <p>{gaiAnalysisResults[selectedAnalysisType]}</p>
-              </div>
+
+              {(() => {
+                try {
+                  const analysisData = JSON.parse(gaiAnalysisResults[selectedAnalysisType]);
+
+                  if (selectedAnalysisType === 'phonological') {
+                    return (
+                      <div className="analysis-content">
+                        <div className="status-card">
+                          <div className="status-label">Processing Strength</div>
+                          <div className={`status-badge ${analysisData.status?.toLowerCase()}`}>
+                            {analysisData.status}
+                          </div>
+                        </div>
+
+                        <div className="findings-section">
+                          <h4>Key Findings</h4>
+                          <ul className="findings-list">
+                            {analysisData.keyFindings?.map((finding, index) => (
+                              <li key={index}>{finding}</li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <div className="evidence-section">
+                          <h4>Evidence</h4>
+                          <ul className="evidence-list">
+                            {analysisData.evidenceFound?.map((evidence, index) => (
+                              <li key={index}>{evidence}</li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <div className="interpretation-section">
+                          <h4>Clinical Interpretation</h4>
+                          <p>{analysisData.interpretation}</p>
+                        </div>
+
+                        <div className="recommendations-section">
+                          <h4>Recommendations</h4>
+                          <ul className="recommendations-list">
+                            {analysisData.recommendations?.map((rec, index) => (
+                              <li key={index}>{rec}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (selectedAnalysisType === 'fluency') {
+                    return (
+                      <div className="analysis-content">
+                        <div className="metrics-row">
+                          <div className="metric-card">
+                            <div className="metric-label">Fluency Status</div>
+                            <div className={`status-badge ${analysisData.status?.toLowerCase()}`}>
+                              {analysisData.status}
+                            </div>
+                          </div>
+                          <div className="metric-card">
+                            <div className="metric-label">Reading Speed</div>
+                            <div className="metric-value">{analysisData.readingSpeed}</div>
+                          </div>
+                          <div className="metric-card">
+                            <div className="metric-label">Automaticity</div>
+                            <div className="metric-value">{analysisData.automaticity}</div>
+                          </div>
+                        </div>
+
+                        <div className="findings-section">
+                          <h4>Key Findings</h4>
+                          <ul className="findings-list">
+                            {analysisData.keyFindings?.map((finding, index) => (
+                              <li key={index}>{finding}</li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <div className="interpretation-section">
+                          <h4>Clinical Interpretation</h4>
+                          <p>{analysisData.interpretation}</p>
+                        </div>
+
+                        <div className="recommendations-section">
+                          <h4>Recommendations</h4>
+                          <ul className="recommendations-list">
+                            {analysisData.recommendations?.map((rec, index) => (
+                              <li key={index}>{rec}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (selectedAnalysisType === 'comprehensive') {
+                    return (
+                      <div className="analysis-content">
+                        <div className="risk-header">
+                          <div className="risk-level-card">
+                            <div className="risk-label">Risk Level</div>
+                            <div className={`risk-badge ${analysisData.riskLevel?.toLowerCase().replace(/\s+/g, '-')}`}>
+                              {analysisData.riskLevel}
+                            </div>
+                          </div>
+                          <div className="confidence-card">
+                            <div className="confidence-label">Confidence</div>
+                            <div className="confidence-score">{analysisData.confidenceScore}</div>
+                          </div>
+                        </div>
+
+                        <div className="strengths-concerns-row">
+                          <div className="strengths-section">
+                            <h4>Strengths</h4>
+                            <ul className="strengths-list">
+                              {analysisData.strengths?.map((strength, index) => (
+                                <li key={index}>{strength}</li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div className="concerns-section">
+                            <h4>Areas of Concern</h4>
+                            <ul className="concerns-list">
+                              {analysisData.concerns?.map((concern, index) => (
+                                <li key={index}>{concern}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+
+                        <div className="indicators-section">
+                          <h4>Key Indicators</h4>
+                          <ul className="indicators-list">
+                            {analysisData.keyIndicators?.map((indicator, index) => (
+                              <li key={index}>{indicator}</li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        <div className="next-steps-section">
+                          <h4>Next Steps</h4>
+                          <ul className="next-steps-list">
+                            {analysisData.nextSteps?.map((step, index) => (
+                              <li key={index}>{step}</li>
+                            ))}
+                          </ul>
+                          <div className="timeline">
+                            <strong>Timeline:</strong> {analysisData.timeline}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                } catch (error) {
+                  return (
+                    <div className="analysis-content">
+                      <div className="error-fallback">
+                        <h4>Analysis Result</h4>
+                        <p>{gaiAnalysisResults[selectedAnalysisType]}</p>
+                      </div>
+                    </div>
+                  );
+                }
+              })()}
             </div>
           )}
         </div>
