@@ -54,7 +54,7 @@ function App() {
   const [gaiAnalysisLoading, setGaiAnalysisLoading] = useState(false)
   const [gaiAnalysisComplete, setGaiAnalysisComplete] = useState(false)
   const [gaiAnalysisResults, setGaiAnalysisResults] = useState(null)
-  const [selectedFeedbackStyle, setSelectedFeedbackStyle] = useState('supportive')
+  const [selectedAnalysisType, setSelectedAnalysisType] = useState('phonological')
 
   // Speech recognition
   const { isListening, isSupported, startListening, stopListening } = useSpeechRecognition()
@@ -316,57 +316,122 @@ FORMAT RESPONSE WITH:
 
       const baseResult = await response.json()
 
- // Generate the three different feedback styles
-const styles = {
-  supportive: `Supportive/Encouraging Framing: 
-Layout your feedback as follows:
-0. **Start by making a bold, confident statement about the user’s unique learning strengths**, highlighting how these shape their approach to reading and problem-solving.  
-1. Start with a brief **summary of strengths** (what the user did well).
-2. Provide **examples of progress or effort** that stand out.
-3. Reframe any difficulties as **growth opportunities** with suggestions for how these areas could improve.
-4. End with a **positive reinforcement statement**, affirming unique strengths linked to reading differences.
+ // Generate three dyslexia-specific analysis types
+const analysisTypes = {
+  phonological: `PHONOLOGICAL PROCESSING ANALYSIS
 
-Analysis:
-${analysisData.text}`,
+You are a dyslexia screening specialist analyzing speech and reading data for phonological processing indicators.
 
-  neutral: `Neutral/Clinical Framing: 
-Layout your feedback as follows:
-0. Start by making a bold, factual statement about the user’s reading profile**, summarizing the key characteristics that can be compared to norms.  
-1. Begin with an **objective summary of the results** (key performance measures).
-2. Provide **comparisons to established norms** where relevant.
-3. Describe **patterns and consistencies/deviations** in the data.
-4. Conclude with a **clear, factual summary** without interpretation or emotional language.
+ASSESSMENT DATA:
+${analysisData.text}
 
-Analysis:
-${analysisData.text}`,
+Provide a professional analysis using this structure:
 
-  deficit: `Deficit/Problem-Focused Framing: 
-Layout your feedback as follows:
-0. Start by making a bold, direct statement about the user’s reading challenges**, emphasizing the areas that most strongly suggest targeted support is needed.  
-1. Start with an **overview of key areas of difficulty** observed.
-2. List **specific performance gaps** or repeated errors with examples.
-3. Identify **potential underlying challenges** (e.g., fluency, decoding, comprehension).
-4. Conclude with a **recommendation for targeted intervention** to address these deficits.
+**PHONOLOGICAL PROCESSING PROFILE**
 
-Analysis:
-${analysisData.text}`
+**Speech-to-Text Pattern Analysis:**
+- Analyze any letter/sound confusion patterns from the assessment data
+- Identify potential phonemic awareness gaps or sound substitution errors
+- Note any consonant blend or vowel sound processing difficulties
+
+**Phonological Indicators:**
+- Rate phonological processing strength: Strong/Moderate/Concerns
+- List specific evidence from the data that supports this rating
+- Compare to typical dyslexia phonological markers
+
+**Clinical Interpretation:**
+- Explain what these patterns suggest about underlying phonological processing
+- Connect findings to established dyslexia research on phonological deficits
+
+**Recommendations:**
+- Suggest specific phonological awareness interventions if needed
+- Recommend further assessment areas related to phonological processing`,
+
+  fluency: `READING FLUENCY & AUTOMATICITY ANALYSIS
+
+You are a dyslexia screening specialist analyzing reading fluency and automaticity patterns.
+
+ASSESSMENT DATA:
+${analysisData.text}
+
+Provide a professional analysis using this structure:
+
+**READING FLUENCY PROFILE**
+
+**Speed & Automaticity Analysis:**
+- Compare reading speed to dyslexia benchmarks (Adult dyslexic avg: 120-150 WPM, Typical: 200-250 WPM)
+- Analyze skip patterns and hesitation indicators from the data
+- Assess reading automaticity vs compensatory strategy use
+
+**Fluency Indicators:**
+- Rate reading fluency: Strong/Developing/Concerns
+- Identify specific patterns suggesting automatic vs effortful reading
+- Note any word recognition vs decoding strategy patterns
+
+**Dyslexia-Specific Markers:**
+- Assess for typical dyslexic reading characteristics (slow but accurate, high skip rate, etc.)
+- Compare performance to established fluency screening criteria
+
+**Clinical Interpretation:**
+- Explain what these patterns suggest about reading development and potential dyslexia
+- Connect to research on dyslexic reading profiles
+
+**Intervention Planning:**
+- Suggest fluency-building strategies appropriate for the observed profile
+- Recommend reading support approaches based on automaticity level`,
+
+  comprehensive: `COMPREHENSIVE DYSLEXIA RISK ASSESSMENT
+
+You are a dyslexia screening specialist providing a comprehensive risk assessment using multi-benchmark data.
+
+ASSESSMENT DATA:
+${analysisData.text}
+
+Provide a professional analysis using this structure:
+
+**DYSLEXIA SCREENING SUMMARY**
+
+**Multi-Factor Analysis:**
+- Synthesize findings from both oral reading fluency and reading pace assessments
+- Identify converging evidence patterns across multiple assessment areas
+- Note any protective factors or compensatory strengths observed
+
+**Risk Assessment:**
+- Overall dyslexia screening result: Low Risk/Moderate Risk/High Risk/Recommend Comprehensive Evaluation
+- Provide specific evidence from the data supporting this classification
+- Compare to established dyslexia screening criteria and cut-off scores
+
+**Strength-Based Profile:**
+- Identify cognitive and reading strengths observed in the assessment
+- Note any advanced vocabulary, comprehension, or reasoning abilities
+- Highlight potential areas of giftedness that may mask reading difficulties
+
+**Evidence-Based Recommendations:**
+- Provide specific next steps based on the risk level identified
+- Suggest appropriate accommodations or interventions for the educational setting
+- Recommend timeline for follow-up assessment or monitoring
+
+**Professional Guidance:**
+- Clarify the limitations of screening vs comprehensive diagnostic evaluation
+- Provide guidance on when to seek formal dyslexia assessment
+- Include supportive resources for understanding dyslexia profiles`
 }
 
 
 
-      // Make separate requests for each style
+      // Make separate requests for each analysis type
       const results = {}
-      for (const [style, prompt] of Object.entries(styles)) {
+      for (const [analysisType, prompt] of Object.entries(analysisTypes)) {
         try {
-          const styleResponse = await fetch('/api/analyze', {
+          const analysisResponse = await fetch('/api/analyze', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ...analysisData, text: prompt })
           })
-          const styleResult = await styleResponse.json()
-          results[style] = styleResult.analysis
+          const analysisResult = await analysisResponse.json()
+          results[analysisType] = analysisResult.analysis
         } catch (error) {
-          results[style] = baseResult.analysis // Fallback
+          results[analysisType] = baseResult.analysis // Fallback
         }
       }
 
@@ -988,26 +1053,26 @@ ${analysisData.text}`
               </div>
             )}
 
-            {/* Feedback Style Buttons */}
+            {/* Analysis Type Buttons */}
             {gaiAnalysisComplete && (
-              <div className="feedback-style-buttons">
+              <div className="analysis-type-buttons">
                 <button
-                  className={`feedback-style-btn ${selectedFeedbackStyle === 'supportive' ? 'active' : ''}`}
-                  onClick={() => setSelectedFeedbackStyle('supportive')}
+                  className={`analysis-type-btn ${selectedAnalysisType === 'phonological' ? 'active' : ''}`}
+                  onClick={() => setSelectedAnalysisType('phonological')}
                 >
-                  Supportive Feedback
+                  Phonological Processing
                 </button>
                 <button
-                  className={`feedback-style-btn ${selectedFeedbackStyle === 'neutral' ? 'active' : ''}`}
-                  onClick={() => setSelectedFeedbackStyle('neutral')}
+                  className={`analysis-type-btn ${selectedAnalysisType === 'fluency' ? 'active' : ''}`}
+                  onClick={() => setSelectedAnalysisType('fluency')}
                 >
-                  Neutral Feedback
+                  Reading Fluency
                 </button>
                 <button
-                  className={`feedback-style-btn ${selectedFeedbackStyle === 'deficit' ? 'active' : ''}`}
-                  onClick={() => setSelectedFeedbackStyle('deficit')}
+                  className={`analysis-type-btn ${selectedAnalysisType === 'comprehensive' ? 'active' : ''}`}
+                  onClick={() => setSelectedAnalysisType('comprehensive')}
                 >
-                  Deficit Feedback
+                  Risk Assessment
                 </button>
               </div>
             )}
@@ -1020,12 +1085,23 @@ ${analysisData.text}`
             </button>
           </div>
 
-          {/* GAI Analysis Results Display */}
+          {/* Dyslexia Analysis Results Display */}
           {gaiAnalysisComplete && gaiAnalysisResults && (
             <div className="gai-results-panel">
-              <h3>GAI Analysis Results</h3>
+              <h3>Dyslexia Screening Analysis</h3>
+              <div className="analysis-type-description">
+                {selectedAnalysisType === 'phonological' && (
+                  <p className="analysis-description">Analysis of speech-to-text patterns for phonological processing indicators</p>
+                )}
+                {selectedAnalysisType === 'fluency' && (
+                  <p className="analysis-description">Assessment of reading speed, automaticity, and fluency markers</p>
+                )}
+                {selectedAnalysisType === 'comprehensive' && (
+                  <p className="analysis-description">Multi-factor risk assessment with evidence-based recommendations</p>
+                )}
+              </div>
               <div className="analysis-content">
-                <p>{gaiAnalysisResults[selectedFeedbackStyle]}</p>
+                <p>{gaiAnalysisResults[selectedAnalysisType]}</p>
               </div>
             </div>
           )}

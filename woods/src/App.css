@@ -2848,7 +2848,7 @@
   font-size: 0.9rem;
 }
 
-.feedback-style-buttons {
+.analysis-type-buttons {
   position: fixed;
   left: 500px;
   top: 40%;
@@ -2859,7 +2859,7 @@
   z-index: 1000;
 }
 
-.feedback-style-btn {
+.analysis-type-btn {
   padding: 1rem 1.5rem;
   background: white;
   border: 2px solid #e0e0e0;
@@ -2869,19 +2869,30 @@
   cursor: pointer;
   transition: all 0.3s ease;
   text-align: center;
-  min-width: 160px;
+  min-width: 180px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.feedback-style-btn:hover {
+.analysis-type-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 
-.feedback-style-btn.active {
-  background: #000; /* active button black */
+.analysis-type-btn.active {
+  background: #000;
   color: white;
   border-color: #000;
+}
+
+.analysis-description {
+  font-size: 0.85rem;
+  color: #666;
+  font-style: italic;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-left: 3px solid #007AFF;
+  border-radius: 4px;
 }
 
 .gai-results-panel {
@@ -2931,13 +2942,13 @@
   color: #ffffff;
 }
 
-.App.dark-mode .feedback-style-btn {
+.App.dark-mode .analysis-type-btn {
   background: #2a2a2a;
   border-color: #444;
   color: #ffffff;
 }
 
-.App.dark-mode .feedback-style-btn:hover {
+.App.dark-mode .analysis-type-btn:hover {
   background: #333;
 }
 
@@ -2948,4 +2959,10 @@
 
 .App.dark-mode .gai-results-panel .analysis-content p {
   color: #ffffff;
+}
+
+.App.dark-mode .analysis-description {
+  color: #bbb;
+  background: #333;
+  border-left-color: #007AFF;
 }
