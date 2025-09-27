@@ -1221,7 +1221,7 @@ Return only valid JSON:
                     return (
                       <div className="analysis-content">
                         <div className="bias-warning">
-                          <strong>⚠️ Critical Analysis:</strong> This assessment examines potential limitations and biases in the dyslexia screening process.
+                          <strong>Critical Analysis:</strong> This assessment examines potential limitations and biases in the dyslexia screening process.
                         </div>
 
                         <div className="bias-sections-grid">

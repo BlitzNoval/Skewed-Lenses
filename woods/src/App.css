@@ -3178,7 +3178,7 @@
 }
 
 .bias-list li::before {
-  content: "⚠";
+  content: "•";
   color: #dc3545;
   font-weight: 600;
   position: absolute;
@@ -3186,7 +3186,7 @@
 }
 
 .limitation-list li::before {
-  content: "⚡";
+  content: "•";
   color: #fd7e14;
   font-weight: 600;
   position: absolute;
@@ -3194,25 +3194,33 @@
 }
 
 .cultural-list li::before {
-  content: "🌍";
+  content: "•";
+  color: #6f42c1;
+  font-weight: 600;
   position: absolute;
   left: -1rem;
 }
 
 .false-positive-list li::before, .false-negative-list li::before {
-  content: "❌";
+  content: "•";
+  color: #dc3545;
+  font-weight: 600;
   position: absolute;
   left: -1rem;
 }
 
 .cautions-list li::before {
-  content: "🚨";
+  content: "•";
+  color: #fd7e14;
+  font-weight: 600;
   position: absolute;
   left: -1rem;
 }
 
 .improvement-list li::before {
-  content: "💡";
+  content: "•";
+  color: #28a745;
+  font-weight: 600;
   position: absolute;
   left: -1rem;
 }
