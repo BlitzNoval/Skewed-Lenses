@@ -358,6 +358,21 @@ Return only valid JSON:
   "keyIndicators": ["Indicator 1", "Indicator 2", "Indicator 3"],
   "nextSteps": ["Step 1", "Step 2"],
   "timeline": "Recommended follow-up timeline"
+}`,
+
+  bias: `You are an AI analysis critic examining dyslexia screening for potential biases and limitations. Analyze this assessment and return ONLY a JSON response in this exact format:
+
+ASSESSMENT DATA: ${analysisData.text}
+
+Return only valid JSON:
+{
+  "potentialBiases": ["Bias 1", "Bias 2", "Bias 3"],
+  "dataLimitations": ["Limitation 1", "Limitation 2"],
+  "culturalFactors": ["Factor 1", "Factor 2"],
+  "falsePositiveRisks": ["Risk 1", "Risk 2"],
+  "falseNegativeRisks": ["Risk 1", "Risk 2"],
+  "recommendedCautions": ["Caution 1", "Caution 2"],
+  "improveAccuracy": ["Improvement 1", "Improvement 2"]
 }`
 }
 
@@ -1018,6 +1033,12 @@ Return only valid JSON:
                 >
                   Risk Assessment
                 </button>
+                <button
+                  className={`analysis-type-btn ${selectedAnalysisType === 'bias' ? 'active' : ''}`}
+                  onClick={() => setSelectedAnalysisType('bias')}
+                >
+                  Bias Analysis
+                </button>
               </div>
             )}
 
@@ -1038,6 +1059,7 @@ Return only valid JSON:
                   {selectedAnalysisType === 'phonological' && 'Phonological Processing'}
                   {selectedAnalysisType === 'fluency' && 'Reading Fluency Assessment'}
                   {selectedAnalysisType === 'comprehensive' && 'Risk Assessment'}
+                  {selectedAnalysisType === 'bias' && 'Bias & Limitations Analysis'}
                 </div>
               </div>
 
@@ -1190,6 +1212,81 @@ Return only valid JSON:
                           <div className="timeline">
                             <strong>Timeline:</strong> {analysisData.timeline}
                           </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  if (selectedAnalysisType === 'bias') {
+                    return (
+                      <div className="analysis-content">
+                        <div className="bias-warning">
+                          <strong>⚠️ Critical Analysis:</strong> This assessment examines potential limitations and biases in the dyslexia screening process.
+                        </div>
+
+                        <div className="bias-sections-grid">
+                          <div className="bias-section">
+                            <h4>Potential Biases</h4>
+                            <ul className="bias-list">
+                              {analysisData.potentialBiases?.map((bias, index) => (
+                                <li key={index}>{bias}</li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          <div className="limitation-section">
+                            <h4>Data Limitations</h4>
+                            <ul className="limitation-list">
+                              {analysisData.dataLimitations?.map((limitation, index) => (
+                                <li key={index}>{limitation}</li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          <div className="cultural-section">
+                            <h4>Cultural Factors</h4>
+                            <ul className="cultural-list">
+                              {analysisData.culturalFactors?.map((factor, index) => (
+                                <li key={index}>{factor}</li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          <div className="false-results-section">
+                            <h4>False Positive Risks</h4>
+                            <ul className="false-positive-list">
+                              {analysisData.falsePositiveRisks?.map((risk, index) => (
+                                <li key={index}>{risk}</li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          <div className="false-results-section">
+                            <h4>False Negative Risks</h4>
+                            <ul className="false-negative-list">
+                              {analysisData.falseNegativeRisks?.map((risk, index) => (
+                                <li key={index}>{risk}</li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          <div className="cautions-section">
+                            <h4>Recommended Cautions</h4>
+                            <ul className="cautions-list">
+                              {analysisData.recommendedCautions?.map((caution, index) => (
+                                <li key={index}>{caution}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+
+                        <div className="improvement-section">
+                          <h4>How to Improve Accuracy</h4>
+                          <ul className="improvement-list">
+                            {analysisData.improveAccuracy?.map((improvement, index) => (
+                              <li key={index}>{improvement}</li>
+                            ))}
+                          </ul>
                         </div>
                       </div>
                     );

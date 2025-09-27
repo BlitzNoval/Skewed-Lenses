@@ -3114,6 +3114,109 @@
   font-style: italic;
 }
 
+/* Bias Analysis Styles */
+.bias-warning {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  color: #856404;
+  font-size: 0.95rem;
+}
+
+.bias-sections-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.bias-section, .limitation-section, .cultural-section,
+.false-results-section, .cautions-section {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.bias-section h4, .limitation-section h4, .cultural-section h4,
+.false-results-section h4, .cautions-section h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: #495057;
+  font-weight: 600;
+}
+
+.improvement-section {
+  background: #e7f3ff;
+  border: 1px solid #b3d9ff;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.improvement-section h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: #004085;
+  font-weight: 600;
+}
+
+.bias-list, .limitation-list, .cultural-list,
+.false-positive-list, .false-negative-list, .cautions-list, .improvement-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  list-style: none;
+}
+
+.bias-list li, .limitation-list li, .cultural-list li,
+.false-positive-list li, .false-negative-list li, .cautions-list li, .improvement-list li {
+  position: relative;
+  margin-bottom: 0.8rem;
+  line-height: 1.5;
+  color: #555;
+}
+
+.bias-list li::before {
+  content: "⚠";
+  color: #dc3545;
+  font-weight: 600;
+  position: absolute;
+  left: -1rem;
+}
+
+.limitation-list li::before {
+  content: "⚡";
+  color: #fd7e14;
+  font-weight: 600;
+  position: absolute;
+  left: -1rem;
+}
+
+.cultural-list li::before {
+  content: "🌍";
+  position: absolute;
+  left: -1rem;
+}
+
+.false-positive-list li::before, .false-negative-list li::before {
+  content: "❌";
+  position: absolute;
+  left: -1rem;
+}
+
+.cautions-list li::before {
+  content: "🚨";
+  position: absolute;
+  left: -1rem;
+}
+
+.improvement-list li::before {
+  content: "💡";
+  position: absolute;
+  left: -1rem;
+}
+
 /* Error Fallback */
 .error-fallback {
   background: #f8f9fa;
@@ -3236,5 +3339,47 @@
 }
 
 .App.dark-mode .error-fallback p {
+  color: #ddd;
+}
+
+.App.dark-mode .bias-warning {
+  background: #4a4a00;
+  border-color: #666600;
+  color: #ffeb3b;
+}
+
+.App.dark-mode .bias-section,
+.App.dark-mode .limitation-section,
+.App.dark-mode .cultural-section,
+.App.dark-mode .false-results-section,
+.App.dark-mode .cautions-section {
+  background: #333;
+  border-color: #555;
+}
+
+.App.dark-mode .bias-section h4,
+.App.dark-mode .limitation-section h4,
+.App.dark-mode .cultural-section h4,
+.App.dark-mode .false-results-section h4,
+.App.dark-mode .cautions-section h4 {
+  color: #fff;
+}
+
+.App.dark-mode .improvement-section {
+  background: #1a3a5c;
+  border-color: #007AFF;
+}
+
+.App.dark-mode .improvement-section h4 {
+  color: #87CEEB;
+}
+
+.App.dark-mode .bias-list li,
+.App.dark-mode .limitation-list li,
+.App.dark-mode .cultural-list li,
+.App.dark-mode .false-positive-list li,
+.App.dark-mode .false-negative-list li,
+.App.dark-mode .cautions-list li,
+.App.dark-mode .improvement-list li {
   color: #ddd;
 }
