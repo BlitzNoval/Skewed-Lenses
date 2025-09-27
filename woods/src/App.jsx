@@ -138,8 +138,6 @@ function App() {
 
   // AI analysis function for Benchmark 2
   const analyzeReadingPace = async (results) => {
-    const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5001'
-
     const analysisData = {
       mode: 'reading_pace',
       readingMetrics: {
@@ -154,7 +152,7 @@ function App() {
       text: `Reading assessment results: User read ${results.totalWords} words in ${results.timeElapsed} seconds (${results.wordsPerMinute} WPM), with ${results.skipRate}% skip rate and ${results.completionRate}% completion rate.`
     }
 
-    const response = await fetch(`${API_URL}/analyze`, {
+    const response = await fetch('/api/analyze', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -260,8 +258,6 @@ function App() {
     setGaiAnalysisLoading(true)
 
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5001'
-
       // Combine both benchmark results
       const combinedResults = {
         benchmark1: savedBenchmarkResults.benchmark1,
@@ -306,7 +302,7 @@ FORMAT RESPONSE WITH:
 ]`
       }
 
-      const response = await fetch(`${API_URL}/analyze`, {
+      const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -362,7 +358,7 @@ ${analysisData.text}`
       const results = {}
       for (const [style, prompt] of Object.entries(styles)) {
         try {
-          const styleResponse = await fetch(`${API_URL}/analyze`, {
+          const styleResponse = await fetch('/api/analyze', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ...analysisData, text: prompt })
