@@ -2967,18 +2967,21 @@
 }
 
 .status-badge.strong {
-  background: #d4edda;
-  color: #155724;
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #000000;
 }
 
 .status-badge.moderate, .status-badge.developing {
-  background: #fff3cd;
-  color: #856404;
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #000000;
 }
 
 .status-badge.concerns {
-  background: #f8d7da;
-  color: #721c24;
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #000000;
 }
 
 .metric-value {
@@ -3037,7 +3040,7 @@
 
 .findings-list li::before, .evidence-list li::before, .indicators-list li::before {
   content: "•";
-  color: #007AFF;
+  color: #000000;
   font-weight: 600;
   position: absolute;
   left: -1rem;
@@ -3045,7 +3048,7 @@
 
 .recommendations-list li::before, .next-steps-list li::before {
   content: "→";
-  color: #28a745;
+  color: #000000;
   font-weight: 600;
   position: absolute;
   left: -1rem;
@@ -3053,7 +3056,7 @@
 
 .strengths-list li::before {
   content: "✓";
-  color: #28a745;
+  color: #000000;
   font-weight: 600;
   position: absolute;
   left: -1rem;
@@ -3061,7 +3064,7 @@
 
 .concerns-list li::before {
   content: "!";
-  color: #dc3545;
+  color: #000000;
   font-weight: 600;
   position: absolute;
   left: -1rem;
@@ -3077,31 +3080,34 @@
 }
 
 .risk-badge.low-risk {
-  background: #d4edda;
-  color: #155724;
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #000000;
 }
 
 .risk-badge.moderate-risk {
-  background: #fff3cd;
-  color: #856404;
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #000000;
 }
 
 .risk-badge.high-risk, .risk-badge.comprehensive-evaluation-recommended {
-  background: #f8d7da;
-  color: #721c24;
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #000000;
 }
 
 .confidence-score {
   font-size: 1.2rem;
   font-weight: 700;
-  color: #007AFF;
+  color: #000000;
 }
 
 .timeline {
   margin-top: 1rem;
   padding: 0.8rem;
-  background: #e7f3ff;
-  border-left: 3px solid #007AFF;
+  background: #ffffff;
+  border-left: 3px solid #000000;
   border-radius: 4px;
   font-size: 0.9rem;
 }
@@ -3116,12 +3122,12 @@
 
 /* Bias Analysis Styles */
 .bias-warning {
-  background: #fff3cd;
-  border: 1px solid #ffeaa7;
+  background: #ffffff;
+  border: 1px solid #000000;
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 1.5rem;
-  color: #856404;
+  color: #000000;
   font-size: 0.95rem;
 }
 
@@ -3149,8 +3155,8 @@
 }
 
 .improvement-section {
-  background: #e7f3ff;
-  border: 1px solid #b3d9ff;
+  background: #ffffff;
+  border: 1px solid #000000;
   border-radius: 8px;
   padding: 1.5rem;
 }
