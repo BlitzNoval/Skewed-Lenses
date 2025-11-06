@@ -3397,3 +3397,239 @@
 .App.dark-mode .improvement-list li {
   color: #ddd;
 }
+
+/* ===================================
+   RESULTS PAGE - 3 AI COMPARISON
+   =================================== */
+
+.results-page {
+  width: 100%;
+  min-height: 100vh;
+  padding: 40px 20px;
+  background: #f8f8f8;
+  position: relative;
+  z-index: 2;
+}
+
+.results-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.results-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.results-subtitle {
+  font-size: 1.1rem;
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.back-to-home-btn {
+  padding: 12px 30px;
+  background: #333;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.back-to-home-btn:hover {
+  background: #555;
+  transform: translateY(-2px);
+}
+
+/* Three Column Container */
+.three-column-container {
+  display: flex;
+  gap: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.ai-analysis-column {
+  flex: 1;
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  min-height: 500px;
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-header {
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 15px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ai-header h2 {
+  font-size: 1.5rem;
+  color: #333;
+  margin: 0;
+}
+
+.ai-badge {
+  background: #4CAF50;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.ai-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.analysis-text {
+  font-size: 1rem;
+  line-height: 1.8;
+  color: #333;
+  white-space: pre-wrap;
+}
+
+.loading-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #999;
+  font-size: 1.1rem;
+}
+
+/* Disclaimer Section */
+.disclaimer-section {
+  max-width: 1400px;
+  margin: 40px auto 0;
+  padding: 30px;
+  background: #fff3cd;
+  border-left: 5px solid #ff9800;
+  border-radius: 8px;
+}
+
+.disclaimer-section h3 {
+  font-size: 1.3rem;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.disclaimer-section p {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: #555;
+  margin-bottom: 10px;
+}
+
+.clinical-note {
+  font-style: italic;
+  color: #666;
+  font-size: 0.95rem;
+  margin-top: 15px;
+}
+
+/* Dark Mode for Results Page */
+.App.dark-mode .results-page {
+  background: #1a1a1a;
+}
+
+.App.dark-mode .results-header h1 {
+  color: #fff;
+}
+
+.App.dark-mode .results-subtitle {
+  color: #aaa;
+}
+
+.App.dark-mode .back-to-home-btn {
+  background: #555;
+}
+
+.App.dark-mode .back-to-home-btn:hover {
+  background: #777;
+}
+
+.App.dark-mode .ai-analysis-column {
+  background: #2a2a2a;
+}
+
+.App.dark-mode .ai-header {
+  border-bottom-color: #444;
+}
+
+.App.dark-mode .ai-header h2 {
+  color: #fff;
+}
+
+.App.dark-mode .analysis-text {
+  color: #ddd;
+}
+
+.App.dark-mode .loading-placeholder {
+  color: #777;
+}
+
+.App.dark-mode .disclaimer-section {
+  background: #3a3a1a;
+  border-left-color: #ff9800;
+}
+
+.App.dark-mode .disclaimer-section h3 {
+  color: #fff;
+}
+
+.App.dark-mode .disclaimer-section p {
+  color: #ccc;
+}
+
+.App.dark-mode .clinical-note {
+  color: #aaa;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .three-column-container {
+    flex-direction: column;
+  }
+
+  .ai-analysis-column {
+    min-height: 400px;
+  }
+
+  .results-header h1 {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .results-page {
+    padding: 20px 10px;
+  }
+
+  .results-header h1 {
+    font-size: 1.7rem;
+  }
+
+  .results-subtitle {
+    font-size: 1rem;
+  }
+
+  .ai-header h2 {
+    font-size: 1.2rem;
+  }
+
+  .disclaimer-section {
+    padding: 20px;
+  }
+}

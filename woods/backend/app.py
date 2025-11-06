@@ -14,7 +14,9 @@ def after_request(response):
     return response
 
 # Initialize Groq client
-GROQ_API_KEY = os.getenv('GROQ_API_KEY', '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')
+GROQ_API_KEY = os.getenv('GROQ_API_KEY')
+if not GROQ_API_KEY:
+    raise ValueError("GROQ_API_KEY environment variable must be set")
 groq_client = Groq(api_key=GROQ_API_KEY)
 
 # Lazy load Whisper model
