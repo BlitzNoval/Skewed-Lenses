@@ -1,24 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './SkewedLensesAnalysis.css';
 
-// AI Models
+// AI Models with lens colors
 const AI_MODELS = {
-  llama: { name: 'Llama', description: 'Analytical, neutral tone', color: '#4A90E2' },
-  openrouter: { name: 'OpenRouter GPT', description: 'Warm and interpretive', color: '#E24A90' },
-  gemini: { name: 'Gemini', description: 'Formal, academic', color: '#90E24A' }
+  llama: { name: 'Llama', description: 'Analytical, neutral tone' },
+  openrouter: { name: 'OpenRouter GPT', description: 'Warm and interpretive' },
+  gemini: { name: 'Gemini', description: 'Formal, academic' }
 };
 
-// Lenses
+// Lenses with colors
 const LENSES = {
-  clinical: { name: 'Clinical Lens', icon: '🏥', description: 'Diagnostic, medical perspective' },
-  educational: { name: 'Educational Lens', icon: '📚', description: 'Teacher-like, constructive' },
-  empathetic: { name: 'Empathetic Lens', icon: '❤️', description: 'Understanding, supportive' },
-  technical: { name: 'Technical Lens', icon: '🔬', description: 'Data-driven, objective' },
-  cultural: { name: 'Cultural Lens', icon: '🌍', description: 'Western-normed standards' }
+  clinical: { name: 'Clinical Lens', icon: '🏥', description: 'Diagnostic, medical perspective', color: 'clinical' },
+  educational: { name: 'Educational Lens', icon: '📚', description: 'Teacher-like, constructive', color: 'educational' },
+  empathetic: { name: 'Empathetic Lens', icon: '❤️', description: 'Understanding, supportive', color: 'empathetic' },
+  technical: { name: 'Technical Lens', icon: '🔬', description: 'Data-driven, objective', color: 'technical' },
+  cultural: { name: 'Cultural Lens', icon: '🌍', description: 'Western-normed standards', color: 'cultural' }
 };
 
 function SkewedLensesAnalysis({ benchmarkData, onClose }) {
-  const [step, setStep] = useState('select-ai'); // 'select-ai', 'select-lens', 'analyzing', 'result', 'change-ai', 'change-lens'
+  const [step, setStep] = useState('select-ai');
   const [selectedAI, setSelectedAI] = useState(null);
   const [selectedLens, setSelectedLens] = useState(null);
   const [usedAIs, setUsedAIs] = useState([]);
@@ -26,27 +26,35 @@ function SkewedLensesAnalysis({ benchmarkData, onClose }) {
   const [currentAnalysis, setCurrentAnalysis] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [analyzeBothOption, setAnalyzeBothOption] = useState(false);
+  const scrollContainerRef = useRef(null);
 
   // Typing animation effect
   useEffect(() => {
     if (isTyping && currentAnalysis) {
-      const text = currentAnalysis;
+      const fullText = currentAnalysis;
       let index = 0;
       setCurrentAnalysis('');
 
       const interval = setInterval(() => {
-        if (index < text.length) {
-          setCurrentAnalysis(prev => prev + text[index]);
+        if (index < fullText.length) {
+          setCurrentAnalysis(prev => prev + fullText[index]);
           index++;
         } else {
           setIsTyping(false);
           clearInterval(interval);
         }
-      }, 20); // Typing speed
+      }, 15); // Faster typing speed
 
       return () => clearInterval(interval);
     }
   }, [isTyping]);
+
+  // Auto-scroll to latest response
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+    }
+  }, [conversationHistory, currentAnalysis]);
 
   const handleAISelection = (aiKey) => {
     setSelectedAI(aiKey);
@@ -61,8 +69,6 @@ function SkewedLensesAnalysis({ benchmarkData, onClose }) {
   };
 
   const performAnalysis = async (aiModel, lens) => {
-    setIsTyping(true);
-
     const previousAnalysis = conversationHistory.length > 0
       ? conversationHistory[conversationHistory.length - 1].analysis
       : null;
@@ -83,29 +89,33 @@ function SkewedLensesAnalysis({ benchmarkData, onClose }) {
       const data = await response.json();
 
       if (data.success) {
-        setCurrentAnalysis(data.analysis);
-
         // Add to conversation history
-        setConversationHistory([...conversationHistory, {
+        const newEntry = {
           aiModel: data.aiModel,
+          aiKey: aiModel,
           lens: LENSES[lens].name,
+          lensKey: lens,
           analysis: data.analysis,
           timestamp: data.timestamp
-        }]);
+        };
 
+        setConversationHistory(prev => [...prev, newEntry]);
+        setCurrentAnalysis(data.analysis);
+        setIsTyping(true);
         setStep('result');
       } else {
         throw new Error(data.error);
       }
     } catch (error) {
       console.error('Analysis error:', error);
-      setCurrentAnalysis('Error: Failed to get analysis. Please try again.');
+      setCurrentAnalysis('Error: Failed to get analysis. Please check your API keys and try again.');
       setIsTyping(false);
       setStep('result');
     }
   };
 
   const handleChangeAI = () => {
+    setAnalyzeBothOption(false);
     setStep('change-ai');
   };
 
@@ -121,22 +131,25 @@ function SkewedLensesAnalysis({ benchmarkData, onClose }) {
     return Object.keys(AI_MODELS).filter(ai => !usedAIs.includes(ai));
   };
 
+  const showGridBackground = step === 'select-ai' || step === 'change-ai';
+
   return (
     <div className="skewed-lenses-container">
-      <div className="conversation-chain">
-        {conversationHistory.map((entry, index) => (
-          <div key={index} className="chain-link">
-            <div className="chain-label">
-              {entry.aiModel} • {entry.lens}
-            </div>
-          </div>
-        ))}
-        {conversationHistory.length > 0 && (
-          <div className="chain-link current">→</div>
-        )}
-      </div>
+      {showGridBackground && <div className="grid-background"></div>}
 
       <div className="analysis-content">
+        {/* Conversation Chain */}
+        {conversationHistory.length > 0 && (
+          <div className="conversation-chain">
+            {conversationHistory.map((entry, index) => (
+              <div key={index} className="chain-link">
+                {entry.aiModel} • {entry.lens}
+              </div>
+            ))}
+            {step !== 'result' && <div className="chain-link current">→</div>}
+          </div>
+        )}
+
         {/* Step 1: Select AI Model */}
         {step === 'select-ai' && (
           <div className="selection-screen">
@@ -148,7 +161,6 @@ function SkewedLensesAnalysis({ benchmarkData, onClose }) {
                   key={key}
                   className="ai-card"
                   onClick={() => handleAISelection(key)}
-                  style={{ borderColor: model.color }}
                 >
                   <div className="ai-name">{model.name}</div>
                   <div className="ai-desc">{model.description}</div>
@@ -168,6 +180,7 @@ function SkewedLensesAnalysis({ benchmarkData, onClose }) {
                 <button
                   key={key}
                   className="lens-card"
+                  data-lens={key}
                   onClick={() => handleLensSelection(key)}
                 >
                   <div className="lens-icon">{lens.icon}</div>
@@ -184,27 +197,37 @@ function SkewedLensesAnalysis({ benchmarkData, onClose }) {
           <div className="analyzing-screen">
             <div className="loading-spinner"></div>
             <h2>Analyzing through {LENSES[selectedLens]?.name}...</h2>
-            <p className="ai-badge">{AI_MODELS[selectedAI]?.name}</p>
+            <div className="ai-badge">{AI_MODELS[selectedAI]?.name}</div>
           </div>
         )}
 
-        {/* Step 4: Show Result */}
+        {/* Step 4: Show Result(s) */}
         {step === 'result' && (
           <div className="result-screen">
-            <div className="result-header">
-              <div className="result-ai">{AI_MODELS[selectedAI]?.name}</div>
-              <div className="result-lens">{LENSES[selectedLens]?.icon} {LENSES[selectedLens]?.name}</div>
-            </div>
-
-            <div className="chat-window">
-              <div className="chat-message">
-                <div className="message-text">
-                  {currentAnalysis.split('\n').map((line, i) => (
-                    <p key={i}>{line}</p>
-                  ))}
-                </div>
-                {isTyping && <div className="typing-cursor">▊</div>}
-              </div>
+            <div className="scroll-container" ref={scrollContainerRef}>
+              {conversationHistory.map((entry, index) => (
+                <React.Fragment key={index}>
+                  {index > 0 && <div className="connection-line"></div>}
+                  <div className="response-card">
+                    <div className="card-header">
+                      <div className="card-ai-name">{entry.aiModel}</div>
+                      <div className={`lens-chip ${entry.lensKey}`}>
+                        {LENSES[entry.lensKey]?.icon} {entry.lens}
+                      </div>
+                    </div>
+                    <div className="card-body">
+                      {index === conversationHistory.length - 1 && isTyping ? (
+                        <>
+                          {currentAnalysis}
+                          <span className="typing-cursor"></span>
+                        </>
+                      ) : (
+                        entry.analysis
+                      )}
+                    </div>
+                  </div>
+                </React.Fragment>
+              ))}
             </div>
 
             {!isTyping && (
@@ -281,7 +304,6 @@ function SkewedLensesAnalysis({ benchmarkData, onClose }) {
                     key={key}
                     className="ai-card"
                     onClick={() => handleAISelection(key)}
-                    style={{ borderColor: model.color }}
                   >
                     <div className="ai-name">{model.name}</div>
                     <div className="ai-desc">{model.description}</div>
@@ -293,9 +315,9 @@ function SkewedLensesAnalysis({ benchmarkData, onClose }) {
         )}
       </div>
 
-      {conversationHistory.length > 0 && (
+      {conversationHistory.length > 0 && step === 'result' && !isTyping && (
         <div className="ending-message">
-          <p>"There are infinite ways to read a single line."</p>
+          "There are infinite ways to read a single line."
         </div>
       )}
     </div>
