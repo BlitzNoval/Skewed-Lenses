@@ -150,6 +150,9 @@ function AnalysisNode({ data }) {
   const [showControls, setShowControls] = useState(false);
   const [showAISelector, setShowAISelector] = useState(false);
   const [showLensSelector, setShowLensSelector] = useState(false);
+  const [pendingAI, setPendingAI] = useState(null);
+  const [pendingLens, setPendingLens] = useState(null);
+  const [branchMode, setBranchMode] = useState(null); // 'newAI' or 'newLens'
 
   const lensColor = LENS_COLORS[data.lens]?.color || '#FFFFFF';
   const lensName = LENS_COLORS[data.lens]?.name || '';
@@ -160,6 +163,49 @@ function AnalysisNode({ data }) {
     if (data.onExpand) {
       data.onExpand(data.id, newExpanded);
     }
+  };
+
+  const handleNewAIClick = () => {
+    setBranchMode('newAI');
+    setPendingAI(null);
+    setPendingLens(null);
+    setShowAISelector(true);
+    setShowLensSelector(false);
+  };
+
+  const handleNewLensClick = () => {
+    setBranchMode('newLens');
+    setPendingAI(data.aiKey); // Keep current AI
+    setPendingLens(null);
+    setShowAISelector(false);
+    setShowLensSelector(true);
+  };
+
+  const handleAISelected = (aiKey) => {
+    setPendingAI(aiKey);
+    setShowAISelector(false);
+    // Now show lens selector
+    setShowLensSelector(true);
+  };
+
+  const handleLensSelected = (lensKey) => {
+    setPendingLens(lensKey);
+    setShowLensSelector(false);
+
+    // Now we have both AI and Lens, trigger generation
+    const finalAI = branchMode === 'newAI' ? pendingAI : data.aiKey;
+    const finalLens = lensKey;
+
+    if (finalAI && finalLens) {
+      if (data.onBranch) {
+        data.onBranch(finalAI, finalLens);
+      }
+    }
+
+    // Reset state
+    setBranchMode(null);
+    setPendingAI(null);
+    setPendingLens(null);
   };
 
   return (
@@ -216,13 +262,13 @@ function AnalysisNode({ data }) {
             )}
           </div>
 
-          {data.status === 'complete' && !data.isTyping && !showControls && !showAISelector && !showLensSelector && (
+          {data.status === 'complete' && !data.isTyping && !showAISelector && !showLensSelector && (
             <div className="branch-buttons-container">
               <button
                 className="branch-btn"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setShowAISelector(true);
+                  handleNewAIClick();
                 }}
                 title="Add New AI"
               >
@@ -232,7 +278,7 @@ function AnalysisNode({ data }) {
                 className="branch-btn"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setShowLensSelector(true);
+                  handleNewLensClick();
                 }}
                 title="Change Lens"
               >
@@ -245,10 +291,16 @@ function AnalysisNode({ data }) {
           {showAISelector && (
             <div className="selector-container" onClick={(e) => e.stopPropagation()}>
               <div className="selector-header">
-                <span className="selector-title">Select AI Model</span>
+                <span className="selector-title">
+                  {branchMode === 'newAI' ? 'Step 1: Select AI Model' : 'Select AI Model'}
+                </span>
                 <button
                   className="selector-close"
-                  onClick={() => setShowAISelector(false)}
+                  onClick={() => {
+                    setShowAISelector(false);
+                    setBranchMode(null);
+                    setPendingAI(null);
+                  }}
                 >
                   ×
                 </button>
@@ -260,10 +312,7 @@ function AnalysisNode({ data }) {
                     <button
                       key={key}
                       className="selector-chip"
-                      onClick={() => {
-                        data.onSelectAI?.(key);
-                        setShowAISelector(false);
-                      }}
+                      onClick={() => handleAISelected(key)}
                     >
                       {model.name}
                     </button>
@@ -276,10 +325,17 @@ function AnalysisNode({ data }) {
           {showLensSelector && (
             <div className="selector-container" onClick={(e) => e.stopPropagation()}>
               <div className="selector-header">
-                <span className="selector-title">Select Lens</span>
+                <span className="selector-title">
+                  {branchMode === 'newAI' ? 'Step 2: Select Lens' : 'Select Lens'}
+                </span>
                 <button
                   className="selector-close"
-                  onClick={() => setShowLensSelector(false)}
+                  onClick={() => {
+                    setShowLensSelector(false);
+                    setBranchMode(null);
+                    setPendingAI(null);
+                    setPendingLens(null);
+                  }}
                 >
                   ×
                 </button>
@@ -293,10 +349,7 @@ function AnalysisNode({ data }) {
                       background: lens.color,
                       border: data.lens === key ? '2px solid white' : 'none'
                     }}
-                    onClick={() => {
-                      data.onSelectLens?.(key);
-                      setShowLensSelector(false);
-                    }}
+                    onClick={() => handleLensSelected(key)}
                   >
                     {lens.name.toUpperCase()}
                   </button>
@@ -342,111 +395,130 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
     }
   }, []);
 
-  const createFirstAnalysis = async (aiKey, lensKey) => {
-    const newNodeId = `node-${nodeIdCounter}`;
-    setNodeIdCounter(nodeIdCounter + 1);
-    setUsedAIs([...usedAIs, aiKey]);
+  const createFirstAnalysis = (aiKey, lensKey) => {
+    setNodeIdCounter((prevCounter) => {
+      const newNodeId = `node-${prevCounter}`;
 
-    // Create new node - position horizontally beside Start card
-    const newNode = {
-      id: newNodeId,
-      type: 'analysisNode',
-      position: { x: 550, y: 50 },
-      data: {
-        aiModel: AI_MODELS[aiKey].name,
-        aiKey: aiKey,
-        lens: lensKey,
-        analysis: '',
-        status: 'generating',
-        isTyping: true,
-        isExpanded: true, // Auto-expand first node
-        usedAIs: [aiKey],
-        onSelectAI: (newAI) => createBranchAnalysis(newNodeId, newAI, lensKey, false),
-        onSelectLens: (newLens) => createBranchAnalysis(newNodeId, aiKey, newLens, true)
-      },
-    };
+      // Create new node - position horizontally beside Start card
+      const newNode = {
+        id: newNodeId,
+        type: 'analysisNode',
+        position: { x: 550, y: 50 },
+        data: {
+          aiModel: AI_MODELS[aiKey].name,
+          aiKey: aiKey,
+          lens: lensKey,
+          analysis: '',
+          status: 'generating',
+          isTyping: true,
+          isExpanded: true, // Auto-expand first node
+          usedAIs: [aiKey],
+          onBranch: (branchAI, branchLens) => {
+            createBranchAnalysis(newNodeId, branchAI, branchLens);
+          }
+        },
+      };
 
-    // Create edge with smooth curve
-    const newEdge = {
-      id: `edge-start-${newNodeId}`,
-      source: 'start',
-      target: newNodeId,
-      type: 'smoothstep',
-      animated: true,
-      style: {
-        stroke: LENS_COLORS[lensKey].color,
-        strokeWidth: 2.5
-      },
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: LENS_COLORS[lensKey].color,
-      },
-    };
+      // Create edge with smooth curve
+      const newEdge = {
+        id: `edge-start-${newNodeId}`,
+        source: 'start',
+        target: newNodeId,
+        type: 'smoothstep',
+        animated: true,
+        style: {
+          stroke: LENS_COLORS[lensKey].color,
+          strokeWidth: 2.5
+        },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: LENS_COLORS[lensKey].color,
+        },
+      };
 
-    // Update nodes: add new node and keep start node visible
-    setNodes((nds) => [...nds, newNode]);
-    setEdges((eds) => [...eds, newEdge]);
+      // Update nodes: add new node and keep start node visible
+      setNodes((nds) => [...nds, newNode]);
+      setEdges((eds) => [...eds, newEdge]);
+      setUsedAIs((prev) => [...prev, aiKey]);
 
-    // Perform API call
-    performAnalysis(newNodeId, aiKey, lensKey, null);
+      // Perform API call
+      performAnalysis(newNodeId, aiKey, lensKey, null);
+
+      return prevCounter + 1;
+    });
   };
 
-  const createBranchAnalysis = async (sourceNodeId, aiKey, lensKey, isSameLens) => {
-    const newNodeId = `node-${nodeIdCounter}`;
-    setNodeIdCounter(nodeIdCounter + 1);
+  const createBranchAnalysis = (sourceNodeId, aiKey, lensKey) => {
+    setUsedAIs((prevUsedAIs) => {
+      const updatedUsedAIs = [...prevUsedAIs, aiKey];
 
-    // Get source node for recursive analysis
-    const sourceNode = nodes.find(n => n.id === sourceNodeId);
-    const previousAnalysis = sourceNode?.data.analysis;
+      setNodeIdCounter((prevCounter) => {
+        const newNodeId = `node-${prevCounter}`;
 
-    // Calculate position (below and offset)
-    const sourcePosition = sourceNode?.position || { x: 250, y: 250 };
-    const newPosition = {
-      x: sourcePosition.x + (Math.random() * 200 - 100),
-      y: sourcePosition.y + 200
-    };
+        setNodes((prevNodes) => {
+          // Get source node for recursive analysis
+          const sourceNode = prevNodes.find(n => n.id === sourceNodeId);
+          const previousAnalysis = sourceNode?.data.analysis;
 
-    // Create new node
-    const newNode = {
-      id: newNodeId,
-      type: 'analysisNode',
-      position: newPosition,
-      data: {
-        aiModel: AI_MODELS[aiKey].name,
-        aiKey: aiKey,
-        lens: lensKey,
-        analysis: '',
-        status: 'generating',
-        isTyping: true,
-        usedAIs: [...usedAIs, aiKey],
-        onSelectAI: (newAI) => createBranchAnalysis(newNodeId, newAI, lensKey, false),
-        onSelectLens: (newLens) => createBranchAnalysis(newNodeId, aiKey, newLens, true)
-      },
-    };
+          // Calculate position (below and offset)
+          const sourcePosition = sourceNode?.position || { x: 550, y: 50 };
+          const newPosition = {
+            x: sourcePosition.x + (Math.random() * 200 - 100),
+            y: sourcePosition.y + 200
+          };
 
-    // Create edge with smooth curve and lens color
-    const newEdge = {
-      id: `edge-${sourceNodeId}-${newNodeId}`,
-      source: sourceNodeId,
-      target: newNodeId,
-      type: 'smoothstep',
-      animated: true,
-      style: {
-        stroke: LENS_COLORS[lensKey].color,
-        strokeWidth: 2.5
-      },
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        color: LENS_COLORS[lensKey].color,
-      },
-    };
+          // Create new node
+          const newNode = {
+            id: newNodeId,
+            type: 'analysisNode',
+            position: newPosition,
+            data: {
+              aiModel: AI_MODELS[aiKey].name,
+              aiKey: aiKey,
+              lens: lensKey,
+              analysis: '',
+              status: 'generating',
+              isTyping: true,
+              isExpanded: true,
+              usedAIs: updatedUsedAIs,
+              onBranch: (branchAI, branchLens) => {
+                createBranchAnalysis(newNodeId, branchAI, branchLens);
+              }
+            },
+          };
 
-    setNodes((nds) => [...nds, newNode]);
-    setEdges((eds) => [...eds, newEdge]);
-    setUsedAIs([...usedAIs, aiKey]);
+          // Create edge with smooth curve and lens color
+          const newEdge = {
+            id: `edge-${sourceNodeId}-${newNodeId}`,
+            source: sourceNodeId,
+            target: newNodeId,
+            type: 'smoothstep',
+            animated: true,
+            style: {
+              stroke: LENS_COLORS[lensKey].color,
+              strokeWidth: 2.5
+            },
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: LENS_COLORS[lensKey].color,
+            },
+          };
 
-    // Perform API call
-    performAnalysis(newNodeId, aiKey, lensKey, previousAnalysis);
+          // Add edge
+          setEdges((prevEdges) => [...prevEdges, newEdge]);
+
+          // Perform API call
+          performAnalysis(newNodeId, aiKey, lensKey, previousAnalysis);
+
+          // Return new nodes array with new node added
+          return [...prevNodes, newNode];
+        });
+
+        return prevCounter + 1;
+      });
+
+      return updatedUsedAIs;
+    });
   };
 
   const performAnalysis = async (nodeId, aiKey, lensKey, previousAnalysis) => {
