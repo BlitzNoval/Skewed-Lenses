@@ -10,6 +10,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import './SkewedLensesCanvas.css';
 import StartNode from './StartNode';
+import AIDiscussionRailway from './AIDiscussionRailway';
 
 // Lens color palette
 const LENS_COLORS = {
@@ -377,6 +378,7 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
   const [selectedLensForNew, setSelectedLensForNew] = useState('clinical');
   const [selectedAIForNew, setSelectedAIForNew] = useState(null);
   const [showInitialStart, setShowInitialStart] = useState(true);
+  const [showDiscussion, setShowDiscussion] = useState(false);
 
   // Initialize with start node
   React.useEffect(() => {
@@ -625,10 +627,25 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
 
   return (
     <div className="skewed-canvas-container">
-      {/* Top Bar - Back Button Only */}
+      {/* Render AI Discussion Railway if active */}
+      {showDiscussion && (
+        <AIDiscussionRailway
+          benchmarkData={benchmarkData}
+          onClose={() => setShowDiscussion(false)}
+        />
+      )}
+
+      {/* Top Bar - Back Button and AI Discussion Button */}
       <div className="canvas-header">
         <button className="close-btn" onClick={onClose}>
           <span>←</span> Back
+        </button>
+        <button
+          className="discussion-btn"
+          onClick={() => setShowDiscussion(true)}
+          title="Launch AI Discussion"
+        >
+          <span>🤖</span> AI Discussion
         </button>
       </div>
 

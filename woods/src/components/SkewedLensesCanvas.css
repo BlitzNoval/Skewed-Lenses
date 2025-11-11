@@ -37,7 +37,11 @@
   position: absolute;
   top: 24px;
   left: 24px;
+  right: 24px;
   z-index: 10;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .canvas-header h1 {
@@ -60,6 +64,31 @@
 .close-btn:hover {
   color: var(--text-muted);
   transform: translateX(-2px);
+}
+
+.discussion-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.discussion-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+}
+
+.discussion-btn span {
+  font-size: 1.1rem;
 }
 
 /* ===== REACT FLOW CANVAS ===== */
