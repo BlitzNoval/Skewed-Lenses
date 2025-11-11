@@ -44,7 +44,9 @@
       "Bash(nvm:*)",
       "Bash(pkill:*)",
       "Bash(./venv/Scripts/python.exe app.py)",
-      "Bash(wget:*)"
+      "Bash(wget:*)",
+      "WebFetch(domain:openrouter.ai)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []

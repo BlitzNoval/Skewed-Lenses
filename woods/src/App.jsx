@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import './App.css'
 import OneInTen from './components/Globe'
 import PlasmaBackground from './components/PlasmaBackground'
+import SkewedLensesAnalysis from './components/SkewedLensesAnalysis'
 import useSpeechStore from './store/useSpeechStore'
 import useSpeechRecognition from './hooks/useSpeechRecognition'
 
@@ -254,98 +255,10 @@ function App() {
     setCurrentPage('begin')
   }
 
-  // GAI Analysis function - Calls 3 AIs with same data
-  const handleGAIAnalysis = async () => {
-    if (!allComplete || gaiAnalysisLoading) return
-
-    setGaiAnalysisLoading(true)
-
-    try {
-      // Combine both benchmark results
-      const combinedResults = {
-        benchmark1: savedBenchmarkResults.benchmark1,
-        benchmark2: savedBenchmarkResults.benchmark2
-      }
-
-      const analysisData = {
-        mode: 'comprehensive_analysis',
-        combinedResults,
-        text: `Comprehensive dyslexia screening analysis:
-
-BENCHMARK 1 (Oral Reading Fluency):
-- Fluency Score: ${combinedResults.benchmark1?.fluencyScore?.correct || 0}/${combinedResults.benchmark1?.fluencyScore?.total || 0} (${combinedResults.benchmark1?.fluencyScore?.percentage || 0}%)
-- Total Attempts: ${combinedResults.benchmark1?.errorAnalysis?.totalAttempts || 0}
-
-BENCHMARK 2 (Reading Pace Assessment):
-- Words Per Minute: ${combinedResults.benchmark2?.wordsPerMinute || 0}
-- Completion Rate: ${combinedResults.benchmark2?.completionRate || 0}%
-- Skip Rate: ${combinedResults.benchmark2?.skipRate || 0}%
-- Total Words Read: ${combinedResults.benchmark2?.totalWords || 0}
-
-ANALYZE FOR:
-- Reading fluency (speed, accuracy, rhythm) compared to expected norms.
-- Word recognition patterns, including skips, substitutions, or decoding struggles.
-- Phonological processing indicators, such as sound-symbol confusion, reversals, or mispronunciations.
-- Working memory demands and signs of difficulty holding or recalling information.
-- Sequence processing, noting whether errors appear systematic or inconsistent.
-
-PROVIDE INSIGHTS ON:
-- Overall level of risk (Low / Medium / High) for dyslexia indicators.
-- Key patterns and behaviors observed in the reading sample.
-- How these patterns compare with commonly observed dyslexic reading profiles.
-- The level of confidence or certainty in the interpretation.
-- A clear reminder that this is a *screening perspective only*, not a diagnosis.
-
-FORMAT RESPONSE WITH:
-- **Risk Level** stated clearly.
-- **Key Indicators** presented as bullet points.
-- **Analysis** in 2–3 sentences, but flexible enough to expand if needed.
-- **Next Steps** with open suggestions for professional follow-up and possible support strategies.
-- **Disclaimer** clarifying the limits of screening and encouraging professional evaluation if concerns remain.`
-      }
-
-      // Call API 3 times in parallel with same data (using Llama for all 3 for now)
-      const [response1, response2, response3] = await Promise.all([
-        fetch('/api/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(analysisData)
-        }),
-        fetch('/api/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(analysisData)
-        }),
-        fetch('/api/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(analysisData)
-        })
-      ])
-
-      const [result1, result2, result3] = await Promise.all([
-        response1.json(),
-        response2.json(),
-        response3.json()
-      ])
-
-      // Store all 3 analyses
-      setAiAnalyses({
-        ai1: result1.analysis,
-        ai2: result2.analysis,
-        ai3: result3.analysis
-      })
-
-      setGaiAnalysisComplete(true)
-      setGaiAnalysisLoading(false)
-
-      // Navigate to results page
-      setCurrentPage('results')
-
-    } catch (error) {
-      console.error('GAI analysis failed:', error)
-      setGaiAnalysisLoading(false)
-    }
+  // GAI Analysis function - Launch new Skewed Lenses interface
+  const handleGAIAnalysis = () => {
+    if (!allComplete) return
+    setCurrentPage('skewed-lenses')
   }
 
   // Keyboard event handler for Enter key (Benchmark 1)
@@ -944,47 +857,9 @@ FORMAT RESPONSE WITH:
                 disabled={!allComplete}
                 onClick={handleGAIAnalysis}
               >
-                {gaiAnalysisLoading ? 'Analyzing...' : 'Get GAI Analysis'}
+                Enter Skewed Lenses
               </button>
             </div>
-            {/* GAI Analysis Loading */}
-            {gaiAnalysisLoading && (
-              <div className="gai-analysis-loading">
-                <div className="loading-spinner"></div>
-                <p>Waiting for AI model to analyze results...</p>
-                <p className="model-name">Groq Llama-3.1-8b-instant</p>
-              </div>
-            )}
-
-            {/* Analysis Type Buttons */}
-            {gaiAnalysisComplete && (
-              <div className="analysis-type-buttons">
-                <button
-                  className={`analysis-type-btn ${selectedAnalysisType === 'phonological' ? 'active' : ''}`}
-                  onClick={() => setSelectedAnalysisType('phonological')}
-                >
-                  Phonological Processing
-                </button>
-                <button
-                  className={`analysis-type-btn ${selectedAnalysisType === 'fluency' ? 'active' : ''}`}
-                  onClick={() => setSelectedAnalysisType('fluency')}
-                >
-                  Reading Fluency
-                </button>
-                <button
-                  className={`analysis-type-btn ${selectedAnalysisType === 'comprehensive' ? 'active' : ''}`}
-                  onClick={() => setSelectedAnalysisType('comprehensive')}
-                >
-                  Risk Assessment
-                </button>
-                <button
-                  className={`analysis-type-btn ${selectedAnalysisType === 'bias' ? 'active' : ''}`}
-                  onClick={() => setSelectedAnalysisType('bias')}
-                >
-                  Bias Analysis
-                </button>
-              </div>
-            )}
 
             <button
               className="persistent-home-btn"
@@ -1252,80 +1127,15 @@ FORMAT RESPONSE WITH:
         </div>
       )}
 
-      {/* Results Page - 3 AI Analysis Comparison */}
-      {currentPage === 'results' && (
-        <div className="results-page">
-          <div className="results-header">
-            <h1>GAI Analysis Results</h1>
-            <p className="results-subtitle">Same data, three different AI interpretations</p>
-            <button
-              className="back-to-home-btn"
-              onClick={() => setCurrentPage('begin')}
-            >
-              Back to Dashboard
-            </button>
-          </div>
-
-          <div className="three-column-container">
-            {/* AI 1 */}
-            <div className="ai-analysis-column">
-              <div className="ai-header">
-                <h2>AI Model 1</h2>
-                <span className="ai-badge">Llama 3.1</span>
-              </div>
-              <div className="ai-content">
-                {aiAnalyses.ai1 ? (
-                  <div className="analysis-text">{aiAnalyses.ai1}</div>
-                ) : (
-                  <div className="loading-placeholder">Loading analysis...</div>
-                )}
-              </div>
-            </div>
-
-            {/* AI 2 */}
-            <div className="ai-analysis-column">
-              <div className="ai-header">
-                <h2>AI Model 2</h2>
-                <span className="ai-badge">Llama 3.1</span>
-              </div>
-              <div className="ai-content">
-                {aiAnalyses.ai2 ? (
-                  <div className="analysis-text">{aiAnalyses.ai2}</div>
-                ) : (
-                  <div className="loading-placeholder">Loading analysis...</div>
-                )}
-              </div>
-            </div>
-
-            {/* AI 3 */}
-            <div className="ai-analysis-column">
-              <div className="ai-header">
-                <h2>AI Model 3</h2>
-                <span className="ai-badge">Llama 3.1</span>
-              </div>
-              <div className="ai-content">
-                {aiAnalyses.ai3 ? (
-                  <div className="analysis-text">{aiAnalyses.ai3}</div>
-                ) : (
-                  <div className="loading-placeholder">Loading analysis...</div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="disclaimer-section">
-            <h3>Why do we show three AI analyses?</h3>
-            <p>
-              All three AI models received identical assessment data from your benchmarks.
-              Any differences in their analyses demonstrate how AI interpretation can vary.
-              <strong> This is why AI screening tools cannot replace professional clinical judgment.</strong>
-            </p>
-            <p className="clinical-note">
-              Note: This is a screening perspective only, not a diagnosis.
-              Please consult with a qualified professional for comprehensive evaluation.
-            </p>
-          </div>
-        </div>
+      {/* Skewed Lenses - Interactive AI Analysis */}
+      {currentPage === 'skewed-lenses' && (
+        <SkewedLensesAnalysis
+          benchmarkData={{
+            benchmark1: savedBenchmarkResults.benchmark1,
+            benchmark2: savedBenchmarkResults.benchmark2
+          }}
+          onClose={() => setCurrentPage('begin')}
+        />
       )}
 
       {currentPage === 'benchmark2' && (
