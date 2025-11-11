@@ -46,7 +46,13 @@
       "Bash(./venv/Scripts/python.exe app.py)",
       "Bash(wget:*)",
       "WebFetch(domain:openrouter.ai)",
-      "WebSearch"
+      "WebSearch",
+      "WebFetch(domain:gist.github.com)",
+      "WebFetch(domain:gist.githubusercontent.com)",
+      "Bash(code --list-extensions:*)",
+      "Bash(vsce package:*)",
+      "Bash(code:*)",
+      "WebFetch(domain:chatgpt.com)"
     ],
     "deny": [],
     "ask": []

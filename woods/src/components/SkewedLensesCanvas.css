@@ -23,6 +23,10 @@
   width: 100vw;
   height: 100vh;
   background: var(--bg-primary);
+  background-image: radial-gradient(circle at center, transparent 0%, rgba(11, 11, 11, 0.8) 100%),
+                    radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 30px 30px;
+  background-position: center, 0 0;
   position: relative;
   overflow: hidden;
   font-family: 'Inter', 'IBM Plex Sans', 'Satoshi', -apple-system, sans-serif;
@@ -31,43 +35,31 @@
 /* ===== CANVAS HEADER ===== */
 .canvas-header {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 60px;
-  background: rgba(11, 11, 11, 0.95);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--border-subtle);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 32px;
+  top: 24px;
+  left: 24px;
   z-index: 10;
 }
 
 .canvas-header h1 {
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  letter-spacing: -0.3px;
-  margin: 0;
+  display: none; /* Remove title */
 }
 
 .close-btn {
   background: transparent;
-  border: 1px solid var(--border-subtle);
-  color: var(--text-muted);
-  padding: 8px 16px;
-  border-radius: 6px;
+  border: none;
+  color: var(--text-primary);
+  padding: 8px 0;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .close-btn:hover {
-  background: var(--bg-card);
-  color: var(--text-primary);
-  border-color: rgba(255, 255, 255, 0.3);
+  color: var(--text-muted);
+  transform: translateX(-2px);
 }
 
 /* ===== REACT FLOW CANVAS ===== */
@@ -86,23 +78,49 @@
 }
 
 .react-flow__edge-path {
-  filter: drop-shadow(0 0 4px currentColor);
+  filter: drop-shadow(0 0 8px currentColor);
+  stroke-width: 2.5px !important;
+}
+
+.react-flow__edge.animated .react-flow__edge-path {
+  stroke-dasharray: 5;
+  animation: dash 20s linear infinite;
+}
+
+@keyframes dash {
+  from {
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 .react-flow__controls {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: 8px;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 .react-flow__controls-button {
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border-subtle);
-  color: var(--text-primary);
+  background: transparent !important;
+  border: none !important;
+  color: #FFFFFF !important;
+  width: 40px !important;
+  height: 40px !important;
+  font-size: 20px !important;
+  transition: all 0.2s ease;
 }
 
 .react-flow__controls-button:hover {
-  background: #1A1A1A;
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.6) !important;
+  transform: scale(1.1);
+}
+
+.react-flow__controls-button svg {
+  width: 20px !important;
+  height: 20px !important;
 }
 
 /* ===== ANALYSIS NODE CARD ===== */
@@ -114,11 +132,23 @@
   max-width: 400px;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
+  position: relative;
 }
 
 .analysis-node:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.analysis-node.expanded {
+  transform: scale(1.05);
+  z-index: 100;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+}
+
+.analysis-node.dimmed {
+  opacity: 0.5;
+  filter: blur(1px);
 }
 
 /* Node Header (Always Visible) */
@@ -187,14 +217,15 @@
 }
 
 .node-analysis {
-  font-size: 0.9rem;
-  line-height: 1.6;
-  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: #E8E8E8;
   margin-bottom: 16px;
   max-height: 400px;
   overflow-y: auto;
   padding-right: 8px;
   white-space: pre-wrap;
+  letter-spacing: 0.01em;
 }
 
 /* Custom scrollbar */
@@ -335,16 +366,22 @@
 /* ===== CANVAS FOOTER ===== */
 .canvas-footer {
   position: absolute;
-  bottom: 20px;
+  bottom: 32px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-style: italic;
-  color: var(--text-muted);
-  opacity: 0.5;
+  color: rgba(255, 255, 255, 0.25);
   z-index: 5;
   pointer-events: none;
   text-align: center;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+  transition: opacity 0.3s ease;
+}
+
+.canvas-footer:hover {
+  opacity: 1;
 }
 
 /* ===== RESPONSIVE DESIGN ===== */

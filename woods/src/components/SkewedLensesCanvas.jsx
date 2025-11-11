@@ -38,9 +38,17 @@ function AnalysisNode({ data }) {
   const lensIcon = LENS_COLORS[data.lens]?.icon || '';
   const lensName = LENS_COLORS[data.lens]?.name || '';
 
+  const handleExpand = () => {
+    const newExpanded = !isExpanded;
+    setIsExpanded(newExpanded);
+    if (data.onExpand) {
+      data.onExpand(data.id, newExpanded);
+    }
+  };
+
   return (
     <div
-      className="analysis-node"
+      className={`analysis-node ${isExpanded ? 'expanded' : ''} ${data.isDimmed ? 'dimmed' : ''}`}
       style={{
         borderColor: `rgba(${parseInt(lensColor.slice(1, 3), 16)}, ${parseInt(lensColor.slice(3, 5), 16)}, ${parseInt(lensColor.slice(5, 7), 16)}, 0.6)`,
         boxShadow: isExpanded ? `0 0 20px ${lensColor}40` : 'none'
@@ -49,7 +57,7 @@ function AnalysisNode({ data }) {
       {/* Collapsed View */}
       <div
         className="node-header"
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={handleExpand}
       >
         <div className="node-title">
           <span className="ai-name">{data.aiModel}</span>
@@ -242,15 +250,16 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
       },
     };
 
-    // Create edge
+    // Create edge with smooth curve
     const newEdge = {
       id: `edge-start-${newNodeId}`,
       source: 'start',
       target: newNodeId,
+      type: 'smoothstep',
       animated: true,
       style: {
         stroke: LENS_COLORS[lensKey].color,
-        strokeWidth: 2
+        strokeWidth: 2.5
       },
       markerEnd: {
         type: MarkerType.ArrowClosed,
@@ -298,15 +307,16 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
       },
     };
 
-    // Create edge with lens color
+    // Create edge with smooth curve and lens color
     const newEdge = {
       id: `edge-${sourceNodeId}-${newNodeId}`,
       source: sourceNodeId,
       target: newNodeId,
+      type: 'smoothstep',
       animated: true,
       style: {
         stroke: LENS_COLORS[lensKey].color,
-        strokeWidth: 2
+        strokeWidth: 2.5
       },
       markerEnd: {
         type: MarkerType.ArrowClosed,
