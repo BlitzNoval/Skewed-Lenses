@@ -332,59 +332,83 @@
   letter-spacing: 0.01em;
 }
 
-/* Semantic Typography Styling */
-.node-analysis h3,
-.node-analysis h4 {
-  font-weight: 600;
-  font-size: 1.05rem;
-  color: var(--text-primary);
-  margin: 16px 0 8px 0;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--border-subtle);
+/* Rendered Analysis Sections */
+.analysis-rendered {
+  animation: fadeIn 0.4s ease-out;
 }
 
-.node-analysis h4 {
-  font-size: 0.85rem;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.analysis-section {
+  margin-bottom: 24px;
+  animation: sectionFadeIn 0.5s ease-out both;
+}
+
+@keyframes sectionFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.section-title {
+  font-size: 0.8rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-top: 12px;
-  padding-bottom: 4px;
-  font-weight: 500;
+  letter-spacing: 0.08em;
+  margin: 0 0 12px 0;
+  padding: 0;
 }
 
-.node-analysis p {
-  margin: 8px 0;
+.section-paragraph {
+  margin: 0 0 12px 0;
   line-height: 1.7;
+  color: #E8E8E8;
+  font-size: 0.95rem;
 }
 
-.node-analysis ul,
-.node-analysis ol {
+.section-paragraph:last-child {
+  margin-bottom: 0;
+}
+
+.section-list-item {
+  display: flex;
+  gap: 10px;
   margin: 8px 0;
-  padding-left: 20px;
-}
-
-.node-analysis li {
-  margin: 6px 0;
   line-height: 1.65;
-  position: relative;
+  color: #E8E8E8;
+  font-size: 0.95rem;
 }
 
-.node-analysis li::before {
-  content: '•';
-  color: var(--text-muted);
+.list-bullet {
+  flex-shrink: 0;
   font-weight: bold;
-  position: absolute;
-  left: -16px;
+  margin-top: 2px;
 }
 
-.node-analysis strong {
-  font-weight: 600;
-  color: var(--text-primary);
+.section-divider {
+  height: 1px;
+  width: 100%;
+  margin: 20px 0;
 }
 
-.node-analysis em {
-  font-style: italic;
-  color: var(--text-secondary);
+/* Raw Analysis (while typing) */
+.analysis-raw {
+  color: #E8E8E8;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  white-space: pre-wrap;
 }
 
 /* Custom scrollbar */

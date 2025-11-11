@@ -27,6 +27,123 @@ const AI_MODELS = {
   gemini: { name: 'Gemini', description: 'Formal, academic' },
 };
 
+// Parse AI response into structured sections
+function parseAnalysisText(text) {
+  if (!text) return [];
+
+  // Remove all markdown formatting
+  let cleanText = text
+    .replace(/\*\*(.+?)\*\*/g, '$1') // Remove bold **
+    .replace(/\*(.+?)\*/g, '$1')     // Remove italic *
+    .replace(/\_\_(.+?)\_\_/g, '$1') // Remove __
+    .replace(/\_(.+?)\_/g, '$1');    // Remove _
+
+  // Split into sections based on common headers
+  const sectionPatterns = [
+    /^(Overall Assessment|Assessment|Summary):?\s*/im,
+    /^(Strengths|Positive Indicators|What Went Well):?\s*/im,
+    /^(Areas for Improvement|Considerations|Challenges|Areas to Watch):?\s*/im,
+    /^(Recommendations|Next Steps|Suggestions):?\s*/im,
+    /^(Encouragement|Support|Final Thoughts|Conclusion):?\s*/im,
+  ];
+
+  const sections = [];
+  let currentSection = { title: '', content: '' };
+  let foundFirstSection = false;
+
+  const lines = cleanText.split('\n');
+
+  for (let line of lines) {
+    line = line.trim();
+    if (!line) continue;
+
+    let matchedSection = false;
+    for (let pattern of sectionPatterns) {
+      const match = line.match(pattern);
+      if (match) {
+        if (currentSection.content || currentSection.title) {
+          sections.push(currentSection);
+        }
+        currentSection = {
+          title: match[1],
+          content: line.replace(pattern, '').trim()
+        };
+        foundFirstSection = true;
+        matchedSection = true;
+        break;
+      }
+    }
+
+    if (!matchedSection) {
+      if (!foundFirstSection && !currentSection.title) {
+        currentSection.title = 'Analysis';
+      }
+      if (currentSection.content) {
+        currentSection.content += '\n' + line;
+      } else {
+        currentSection.content = line;
+      }
+    }
+  }
+
+  if (currentSection.title || currentSection.content) {
+    sections.push(currentSection);
+  }
+
+  // Break content into paragraphs
+  sections.forEach(section => {
+    section.paragraphs = section.content
+      .split(/\n\n+/)
+      .map(p => p.trim())
+      .filter(p => p.length > 0);
+  });
+
+  return sections;
+}
+
+// Rendered Analysis Component
+function RenderedAnalysis({ text, lensColor, isTyping }) {
+  const sections = parseAnalysisText(text);
+
+  if (isTyping) {
+    return (
+      <div className="analysis-raw">
+        {text}
+        <span className="typing-cursor">▊</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="analysis-rendered">
+      {sections.map((section, idx) => (
+        <div key={idx} className="analysis-section" style={{ animationDelay: `${idx * 0.1}s` }}>
+          {section.title && (
+            <h4 className="section-title" style={{ color: lensColor }}>
+              {section.title.toUpperCase()}
+            </h4>
+          )}
+          {section.paragraphs.map((para, pIdx) => {
+            // Check if paragraph is a list item
+            if (para.match(/^[\-\•\*]\s/)) {
+              return (
+                <div key={pIdx} className="section-list-item">
+                  <span className="list-bullet" style={{ color: lensColor }}>•</span>
+                  <span>{para.replace(/^[\-\•\*]\s/, '')}</span>
+                </div>
+              );
+            }
+            return <p key={pIdx} className="section-paragraph">{para}</p>;
+          })}
+          {idx < sections.length - 1 && (
+            <div className="section-divider" style={{ background: lensColor, opacity: 0.2 }} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // Custom Node Component
 function AnalysisNode({ data }) {
   const [isExpanded, setIsExpanded] = useState(data.isExpanded || false);
@@ -88,13 +205,14 @@ function AnalysisNode({ data }) {
             </div>
           )}
           <div className="node-analysis">
-            {data.isTyping ? (
-              <>
-                {data.analysis}
-                <span className="typing-cursor">▊</span>
-              </>
+            {data.analysis ? (
+              <RenderedAnalysis
+                text={data.analysis}
+                lensColor={lensColor}
+                isTyping={data.isTyping}
+              />
             ) : (
-              data.analysis || (data.status === 'generating' ? '' : 'No analysis yet...')
+              data.status === 'generating' ? '' : 'No analysis yet...'
             )}
           </div>
 
@@ -362,27 +480,30 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
   const typeOutAnalysis = (nodeId, fullText) => {
     let index = 0;
     const interval = setInterval(() => {
-      if (index <= fullText.length) {
-        setNodes((nds) =>
-          nds.map((node) => {
-            if (node.id === nodeId) {
-              const isComplete = index >= fullText.length;
-              return {
-                ...node,
-                data: {
-                  ...node.data,
-                  analysis: fullText.substring(0, index),
-                  isTyping: !isComplete,
-                  status: isComplete ? 'complete' : 'generating',
-                  completionFlash: isComplete // Trigger flash on completion
-                }
-              };
-            }
-            return node;
-          })
-        );
-        index += 2; // Type 2 chars at a time
-      } else {
+      index += 2; // Type 2 chars at a time
+
+      const isComplete = index >= fullText.length;
+      const displayText = isComplete ? fullText : fullText.substring(0, index);
+
+      setNodes((nds) =>
+        nds.map((node) => {
+          if (node.id === nodeId) {
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                analysis: displayText,
+                isTyping: !isComplete,
+                status: isComplete ? 'complete' : 'generating',
+                completionFlash: isComplete
+              }
+            };
+          }
+          return node;
+        })
+      );
+
+      if (isComplete) {
         clearInterval(interval);
         // Remove flash class after animation completes
         setTimeout(() => {
@@ -414,8 +535,9 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
             data: {
               ...node.data,
               analysis,
-              isTyping,
-              status: 'complete'
+              isTyping: false,
+              status: 'complete',
+              completionFlash: false
             }
           };
         }
