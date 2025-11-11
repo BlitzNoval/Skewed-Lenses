@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import ReactFlow, {
   Controls,
   Background,
@@ -6,6 +6,8 @@ import ReactFlow, {
   useEdgesState,
   addEdge,
   MarkerType,
+  useReactFlow,
+  ReactFlowProvider,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import './SkewedLensesCanvas.css';
@@ -25,6 +27,16 @@ const AI_MODELS = {
   llama: { name: 'Llama', description: 'Analytical, neutral' },
   openrouter: { name: 'OpenRouter GPT', description: 'Warm, interpretive' },
   gemini: { name: 'Gemini', description: 'Formal, academic' },
+};
+
+// Grid Layout Constants
+const GRID_CONFIG = {
+  START_X: 250,
+  START_Y: 50,
+  COLUMN_SPACING: 450, // Horizontal distance between columns
+  ROW_SPACING: 250, // Vertical distance between siblings
+  NODE_WIDTH: 400, // Expected node width for calculations
+  NODE_HEIGHT: 200, // Expected node height for calculations
 };
 
 // Parse AI response into structured sections
@@ -370,6 +382,7 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
     startNode: StartNode
   }), []);
 
+  const reactFlowInstance = useReactFlow();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [usedAIs, setUsedAIs] = useState([]);
@@ -378,13 +391,60 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
   const [selectedAIForNew, setSelectedAIForNew] = useState(null);
   const [showInitialStart, setShowInitialStart] = useState(true);
 
+  // Track node layout hierarchy for grid positioning
+  const layoutTrackerRef = useRef({
+    childrenCount: {}, // Track how many children each node has
+    nodeDepths: { 'start': 0 }, // Track depth (column) of each node
+  });
+
+  // Calculate grid position for a new node
+  const calculateGridPosition = (parentNodeId) => {
+    const tracker = layoutTrackerRef.current;
+
+    // Initialize parent's children count if not exists
+    if (!tracker.childrenCount[parentNodeId]) {
+      tracker.childrenCount[parentNodeId] = 0;
+    }
+
+    // Get parent's depth and increment to get child's column
+    const parentDepth = tracker.nodeDepths[parentNodeId] || 0;
+    const childDepth = parentDepth + 1;
+
+    // Get sibling index (which child of this parent)
+    const siblingIndex = tracker.childrenCount[parentNodeId];
+
+    // Increment children count for next child
+    tracker.childrenCount[parentNodeId] += 1;
+
+    // Calculate position based on grid
+    // All nodes at same depth are in same column (X position)
+    // Siblings stack vertically (Y position)
+    const position = {
+      x: GRID_CONFIG.START_X + (childDepth * GRID_CONFIG.COLUMN_SPACING),
+      y: GRID_CONFIG.START_Y + (siblingIndex * GRID_CONFIG.ROW_SPACING)
+    };
+
+    return { position, depth: childDepth, siblingIndex };
+  };
+
+  // Auto-pan camera to show newly created node
+  const panToNode = (nodeId, position) => {
+    setTimeout(() => {
+      reactFlowInstance.setCenter(
+        position.x + GRID_CONFIG.NODE_WIDTH / 2,
+        position.y + GRID_CONFIG.NODE_HEIGHT / 2,
+        { zoom: 1, duration: 800 }
+      );
+    }, 100);
+  };
+
   // Initialize with start node
   React.useEffect(() => {
     if (nodes.length === 0) {
       const startNode = {
         id: 'start',
         type: 'startNode',
-        position: { x: 250, y: 50 },
+        position: { x: GRID_CONFIG.START_X, y: GRID_CONFIG.START_Y },
         data: {
           onConfirm: (aiKey, lensKey) => {
             createFirstAnalysis(aiKey, lensKey);
@@ -399,11 +459,17 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
     setNodeIdCounter((prevCounter) => {
       const newNodeId = `node-${prevCounter}`;
 
-      // Create new node - position horizontally beside Start card
+      // Calculate grid position for first node (child of Start)
+      const { position, depth } = calculateGridPosition('start');
+
+      // Track this node's depth
+      layoutTrackerRef.current.nodeDepths[newNodeId] = depth;
+
+      // Create new node - position using grid system
       const newNode = {
         id: newNodeId,
         type: 'analysisNode',
-        position: { x: 550, y: 50 },
+        position: position,
         data: {
           aiModel: AI_MODELS[aiKey].name,
           aiKey: aiKey,
@@ -441,6 +507,9 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
       setEdges((eds) => [...eds, newEdge]);
       setUsedAIs((prev) => [...prev, aiKey]);
 
+      // Auto-pan camera to show new node
+      panToNode(newNodeId, position);
+
       // Perform API call
       performAnalysis(newNodeId, aiKey, lensKey, null);
 
@@ -460,12 +529,11 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
           const sourceNode = prevNodes.find(n => n.id === sourceNodeId);
           const previousAnalysis = sourceNode?.data.analysis;
 
-          // Calculate position (below and offset)
-          const sourcePosition = sourceNode?.position || { x: 550, y: 50 };
-          const newPosition = {
-            x: sourcePosition.x + (Math.random() * 200 - 100),
-            y: sourcePosition.y + 200
-          };
+          // Calculate grid position for branch node (child of source)
+          const { position: newPosition, depth } = calculateGridPosition(sourceNodeId);
+
+          // Track this node's depth
+          layoutTrackerRef.current.nodeDepths[newNodeId] = depth;
 
           // Create new node
           const newNode = {
@@ -506,6 +574,9 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
 
           // Add edge
           setEdges((prevEdges) => [...prevEdges, newEdge]);
+
+          // Auto-pan camera to show new node
+          panToNode(newNodeId, newPosition);
 
           // Perform API call
           performAnalysis(newNodeId, aiKey, lensKey, previousAnalysis);
@@ -650,4 +721,13 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
   );
 }
 
-export default SkewedLensesCanvas;
+// Wrapper component with ReactFlowProvider
+function SkewedLensesCanvasWrapper(props) {
+  return (
+    <ReactFlowProvider>
+      <SkewedLensesCanvas {...props} />
+    </ReactFlowProvider>
+  );
+}
+
+export default SkewedLensesCanvasWrapper;

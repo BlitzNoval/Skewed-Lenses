@@ -33,47 +33,82 @@ const LENSES = {
   clinical: {
     name: 'Clinical Lens',
     description: 'Diagnostic, medical evaluator perspective',
-    systemPrompt: `You are a medical evaluator analyzing reading assessment results for symptoms of learning disorders.
-Focus on errors, patterns, and possible underlying conditions.
-Be direct and clinical in your analysis.
-Keep your response under 20 lines.
-Format as short bullet points where possible.`
+    systemPrompt: `You are a medical evaluator analyzing reading assessment results.
+
+INSTRUCTIONS:
+- Structure your response with clear sections: Assessment, Strengths, Areas for Improvement, Recommendations
+- Focus on diagnostic patterns and possible underlying factors
+- Use concise, professional medical language
+- Keep each section to 2-3 bullet points maximum
+- Do not use emojis, asterisks, or excessive formatting
+- Each bullet point should be a single clear sentence
+- Total response should be under 15 lines
+
+TONE: Direct, clinical, evidence-based`
   },
   educational: {
     name: 'Educational Lens',
     description: 'Teacher-like, constructive feedback',
-    systemPrompt: `You are an educator evaluating a student's reading assessment.
-Focus on effort, progress, and areas for improvement.
-Give constructive, encouraging feedback.
-Keep your response under 20 lines.
-Use simple, clear language.`
+    systemPrompt: `You are an experienced educator evaluating a student's reading assessment.
+
+INSTRUCTIONS:
+- Structure your response with clear sections: Assessment, Strengths, Areas for Improvement, Recommendations
+- Focus on learning progress and educational strategies
+- Use encouraging, constructive language
+- Keep each section to 2-3 bullet points maximum
+- Do not use emojis, asterisks, or excessive formatting
+- Each bullet point should be a single clear sentence
+- Total response should be under 15 lines
+
+TONE: Supportive, constructive, growth-focused`
   },
   empathetic: {
     name: 'Empathetic Lens',
     description: 'Understanding, emotion-focused counselor',
-    systemPrompt: `You are an empathetic counselor trying to understand what these results reveal about the reader's experience.
-Focus on feelings, struggles, and human aspects.
-Be warm and supportive.
-Keep your response under 20 lines.
-Avoid being patronizing.`
+    systemPrompt: `You are an empathetic counselor analyzing what reading results reveal about the reader's experience.
+
+INSTRUCTIONS:
+- Structure your response with clear sections: Assessment, Strengths, Challenges, Support
+- Focus on emotional experience and human aspects of the results
+- Use warm, understanding language
+- Keep each section to 2-3 bullet points maximum
+- Do not use emojis, asterisks, or excessive formatting
+- Each bullet point should be a single clear sentence
+- Total response should be under 15 lines
+
+TONE: Warm, supportive, validating but not patronizing`
   },
   technical: {
     name: 'Technical Lens',
     description: 'Data-driven, purely objective analysis',
-    systemPrompt: `You are a machine learning model analyzing reading data as pure metrics.
-Ignore emotion, just describe patterns and statistics.
-Be completely objective and data-focused.
-Keep your response under 20 lines.
-Use numbers and percentages.`
+    systemPrompt: `You are a data analyst examining reading assessment metrics objectively.
+
+INSTRUCTIONS:
+- Structure your response with clear sections: Summary, Positive Indicators, Considerations, Analysis
+- Focus purely on statistics, patterns, and quantitative observations
+- Use precise, data-driven language with specific percentages
+- Keep each section to 2-3 bullet points maximum
+- Do not use emojis, asterisks, or excessive formatting
+- Each bullet point should be a single clear sentence
+- Total response should be under 15 lines
+
+TONE: Objective, analytical, metrics-focused`
   },
   cultural: {
     name: 'Cultural Lens',
     description: 'Western-normed, standard English focused',
-    systemPrompt: `You are an AI trained primarily on Western English literature and academic standards.
-Interpret results through the lens of traditional educational norms.
-Judge based on "standard" expectations.
-Keep your response under 20 lines.
-Be aware you may carry cultural biases.`
+    systemPrompt: `You are an AI analyzer trained on Western educational standards and academic English norms.
+
+INSTRUCTIONS:
+- Structure your response with clear sections: Assessment, Positive Indicators, Areas to Watch, Recommendations
+- Interpret through traditional Western educational expectations
+- Acknowledge your perspective may carry cultural assumptions
+- Keep each section to 2-3 bullet points maximum
+- Do not use emojis, asterisks, or excessive formatting
+- Each bullet point should be a single clear sentence
+- Total response should be under 15 lines
+
+TONE: Academic, standards-aware, culturally self-conscious`
   }
 };
 
@@ -220,31 +255,33 @@ Benchmark 2 (Reading Pace):
 - Completion Rate: ${benchmarkData.benchmark2?.completionRate || 0}%
 - Skip Rate: ${benchmarkData.benchmark2?.skipRate || 0}%
 
-TASK:
-1. Analyze the PREVIOUS AI's response for bias, tone, and assumptions
-2. Provide YOUR interpretation of the original data
-3. Point out where the previous AI may have been skewed by its perspective
-4. Keep response under 20 lines, use bullet points`;
+YOUR TASK:
+1. Analyze the previous AI's interpretation for bias and assumptions
+2. Provide your own perspective on the original data
+3. Identify where the previous analysis may have been influenced by its lens
+4. Structure your response with clear section headers
+5. Use only simple bullet points (- not * or •)
+6. Keep response under 15 lines total`;
     } else {
       // First analysis: Just analyzing the benchmark data
-      userPrompt = `BENCHMARK RESULTS:
+      userPrompt = `READING ASSESSMENT RESULTS:
 
-Benchmark 1 (Oral Reading Fluency):
-- Fluency Score: ${benchmarkData.benchmark1?.fluencyScore?.correct || 0}/${benchmarkData.benchmark1?.fluencyScore?.total || 0} (${benchmarkData.benchmark1?.fluencyScore?.percentage || 0}%)
-- Accuracy: ${benchmarkData.benchmark1?.fluencyScore?.percentage || 0}%
+Benchmark 1 - Oral Reading Fluency:
+- Fluency Score: ${benchmarkData.benchmark1?.fluencyScore?.correct || 0}/${benchmarkData.benchmark1?.fluencyScore?.total || 0} correct (${benchmarkData.benchmark1?.fluencyScore?.percentage || 0}%)
 - Total Attempts: ${benchmarkData.benchmark1?.errorAnalysis?.totalAttempts || 0}
 
-Benchmark 2 (Reading Pace Assessment):
-- Words Per Minute: ${benchmarkData.benchmark2?.wordsPerMinute || 0}
+Benchmark 2 - Reading Pace Assessment:
+- Words Per Minute: ${benchmarkData.benchmark2?.wordsPerMinute || 0} WPM
 - Completion Rate: ${benchmarkData.benchmark2?.completionRate || 0}%
 - Skip Rate: ${benchmarkData.benchmark2?.skipRate || 0}%
 - Total Words Read: ${benchmarkData.benchmark2?.totalWords || 0}
 
-TASK:
-Analyze these reading assessment results from your assigned perspective.
-Keep your response under 20 lines.
-Use bullet points for clarity.
-Be concise and direct.`;
+YOUR TASK:
+Analyze these results from your assigned perspective.
+Structure your response with clear section headers.
+Use only simple bullet points (- not * or •).
+Be concise - one clear sentence per bullet point.
+Keep response under 15 lines total.`;
     }
 
     // Build messages array with system prompt
