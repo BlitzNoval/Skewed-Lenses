@@ -1,0 +1,386 @@
+/* ========================================
+   SKEWED LENSES CANVAS - Railway-Style
+   Single-screen node-based interface
+   ======================================== */
+
+:root {
+  --lens-clinical: #00BFA6;
+  --lens-educational: #F4C542;
+  --lens-empathetic: #FF8FA3;
+  --lens-technical: #9EA0A6;
+  --lens-cultural: #A78BFA;
+
+  --bg-primary: #0B0B0B;
+  --bg-card: #101010;
+  --text-primary: #EDEDED;
+  --text-secondary: #DADADA;
+  --text-muted: #999999;
+  --border-subtle: rgba(255, 255, 255, 0.1);
+}
+
+/* ===== MAIN CONTAINER ===== */
+.skewed-canvas-container {
+  width: 100vw;
+  height: 100vh;
+  background: var(--bg-primary);
+  position: relative;
+  overflow: hidden;
+  font-family: 'Inter', 'IBM Plex Sans', 'Satoshi', -apple-system, sans-serif;
+}
+
+/* ===== CANVAS HEADER ===== */
+.canvas-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: rgba(11, 11, 11, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  z-index: 10;
+}
+
+.canvas-header h1 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.3px;
+  margin: 0;
+}
+
+.close-btn {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* ===== REACT FLOW CANVAS ===== */
+.react-flow-canvas {
+  width: 100%;
+  height: 100%;
+  background: var(--bg-primary);
+}
+
+.react-flow__node {
+  cursor: grab;
+}
+
+.react-flow__node:active {
+  cursor: grabbing;
+}
+
+.react-flow__edge-path {
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+.react-flow__controls {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+}
+
+.react-flow__controls-button {
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.react-flow__controls-button:hover {
+  background: #1A1A1A;
+}
+
+/* ===== ANALYSIS NODE CARD ===== */
+.analysis-node {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  min-width: 200px;
+  max-width: 400px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+
+.analysis-node:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+/* Node Header (Always Visible) */
+.node-header {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.node-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.ai-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.lens-pill {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: #FFF;
+  white-space: nowrap;
+}
+
+.node-status {
+  display: flex;
+  align-items: center;
+}
+
+.status-icon {
+  font-size: 1rem;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Node Content (Expanded State) */
+.node-content {
+  border-top: 1px solid var(--border-subtle);
+  padding: 16px;
+  animation: expandDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes expandDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 1000px;
+  }
+}
+
+.node-analysis {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 8px;
+  white-space: pre-wrap;
+}
+
+/* Custom scrollbar */
+.node-analysis::-webkit-scrollbar {
+  width: 4px;
+}
+
+.node-analysis::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.node-analysis::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+.typing-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 14px;
+  background: var(--text-primary);
+  margin-left: 2px;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* Node Actions */
+.node-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.node-action-btn {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.node-action-btn:hover {
+  background: #1A1A1A;
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Inline Controls */
+.inline-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.control-option {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.control-option:hover {
+  background: #1A1A1A;
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Selector Strip (Horizontal Chips) */
+.selector-strip {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--bg-primary);
+  border-radius: 8px;
+  flex-wrap: wrap;
+  animation: slideIn 0.2s ease-out;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.selector-chip {
+  background: #1A1A1A;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.selector-chip:hover {
+  transform: translateY(-2px);
+  background: #252525;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.selector-chip.lens-chip {
+  color: #FFF;
+  border: none;
+}
+
+.selector-chip.lens-chip:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* ===== CANVAS FOOTER ===== */
+.canvas-footer {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--text-muted);
+  opacity: 0.5;
+  z-index: 5;
+  pointer-events: none;
+  text-align: center;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 768px) {
+  .canvas-header {
+    padding: 0 16px;
+  }
+
+  .canvas-header h1 {
+    font-size: 1rem;
+  }
+
+  .analysis-node {
+    max-width: 300px;
+  }
+
+  .selector-strip {
+    flex-direction: column;
+  }
+
+  .selector-chip {
+    width: 100%;
+  }
+}
+
+/* ===== MINIMAP CUSTOMIZATION ===== */
+.react-flow__minimap {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-subtle) !important;
+}
+
+.react-flow__minimap-mask {
+  fill: rgba(11, 11, 11, 0.8) !important;
+}
+
+.react-flow__minimap-node {
+  fill: #1A1A1A !important;
+  stroke: var(--border-subtle) !important;
+}
