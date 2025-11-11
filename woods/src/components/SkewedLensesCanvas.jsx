@@ -246,25 +246,12 @@ function AnalysisNode({ data }) {
         <div className="node-content">
           {data.status === 'generating' && !data.analysis && (
             <div className="loading-feedback">
-              <p>Generating analysis...</p>
-              <p className="loading-subtext">Analyzing through the {lensName.toUpperCase()} lens<span className="loading-dots">...</span></p>
+              <p>Analyzing your benchmark results...</p>
+              <p className="loading-subtext">Processing through the {lensName} lens<span className="loading-dots">...</span></p>
             </div>
           )}
           <div className="node-analysis">
-            {data.status === 'error' ? (
-              <div className="error-state">
-                <p className="error-message">Error: {data.error}</p>
-                <button
-                  className="retry-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    data.onRetry?.();
-                  }}
-                >
-                  Retry Analysis
-                </button>
-              </div>
-            ) : data.analysis ? (
+            {data.analysis ? (
               <RenderedAnalysis
                 text={data.analysis}
                 lensColor={lensColor}
@@ -376,12 +363,6 @@ function AnalysisNode({ data }) {
   );
 }
 
-// Grid Layout Constants
-const COLUMN_WIDTH = 500; // Horizontal spacing between columns
-const ROW_HEIGHT = 280;   // Vertical spacing between nodes
-const START_X = 250;      // Starting X position
-const START_Y = 50;       // Starting Y position
-
 // Main Canvas Component
 function SkewedLensesCanvas({ benchmarkData, onClose }) {
   const nodeTypes = useMemo(() => ({
@@ -396,33 +377,6 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
   const [selectedLensForNew, setSelectedLensForNew] = useState('clinical');
   const [selectedAIForNew, setSelectedAIForNew] = useState(null);
   const [showInitialStart, setShowInitialStart] = useState(true);
-  const [columnCounts, setColumnCounts] = useState({}); // Track nodes per column
-  const reactFlowInstance = React.useRef(null);
-
-  // Calculate grid position for a new node
-  const calculateGridPosition = (column) => {
-    const rowIndex = columnCounts[column] || 0;
-    return {
-      x: START_X + (column * COLUMN_WIDTH),
-      y: START_Y + (rowIndex * ROW_HEIGHT)
-    };
-  };
-
-  // Auto-pan to a newly created node
-  const panToNode = (nodeId) => {
-    setTimeout(() => {
-      if (reactFlowInstance.current) {
-        const node = nodes.find(n => n.id === nodeId);
-        if (node) {
-          reactFlowInstance.current.setCenter(
-            node.position.x + 200,
-            node.position.y + 100,
-            { duration: 800, zoom: 1 }
-          );
-        }
-      }
-    }, 100);
-  };
 
   // Initialize with start node
   React.useEffect(() => {
@@ -430,7 +384,7 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
       const startNode = {
         id: 'start',
         type: 'startNode',
-        position: { x: START_X, y: START_Y },
+        position: { x: 250, y: 50 },
         data: {
           onConfirm: (aiKey, lensKey) => {
             createFirstAnalysis(aiKey, lensKey);
@@ -438,71 +392,57 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
         },
       };
       setNodes([startNode]);
-      setColumnCounts({ 0: 1 }); // Start node is in column 0
     }
   }, []);
 
   const createFirstAnalysis = (aiKey, lensKey) => {
     setNodeIdCounter((prevCounter) => {
       const newNodeId = `node-${prevCounter}`;
-      const column = 1; // First generation is column 1
 
-      // Calculate grid position
-      setColumnCounts((prevCounts) => {
-        const position = calculateGridPosition(column);
-        const updatedCounts = { ...prevCounts, [column]: (prevCounts[column] || 0) + 1 };
+      // Create new node - position horizontally beside Start card
+      const newNode = {
+        id: newNodeId,
+        type: 'analysisNode',
+        position: { x: 550, y: 50 },
+        data: {
+          aiModel: AI_MODELS[aiKey].name,
+          aiKey: aiKey,
+          lens: lensKey,
+          analysis: '',
+          status: 'generating',
+          isTyping: true,
+          isExpanded: true, // Auto-expand first node
+          usedAIs: [aiKey],
+          onBranch: (branchAI, branchLens) => {
+            createBranchAnalysis(newNodeId, branchAI, branchLens);
+          }
+        },
+      };
 
-        // Create new node at grid position
-        const newNode = {
-          id: newNodeId,
-          type: 'analysisNode',
-          position: position,
-          data: {
-            aiModel: AI_MODELS[aiKey].name,
-            aiKey: aiKey,
-            lens: lensKey,
-            analysis: '',
-            status: 'generating',
-            isTyping: true,
-            isExpanded: true,
-            usedAIs: [aiKey],
-            column: column, // Store column for children
-            onBranch: (branchAI, branchLens) => {
-              createBranchAnalysis(newNodeId, branchAI, branchLens);
-            }
-          },
-        };
+      // Create edge with smooth curve
+      const newEdge = {
+        id: `edge-start-${newNodeId}`,
+        source: 'start',
+        target: newNodeId,
+        type: 'smoothstep',
+        animated: true,
+        style: {
+          stroke: LENS_COLORS[lensKey].color,
+          strokeWidth: 2.5
+        },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: LENS_COLORS[lensKey].color,
+        },
+      };
 
-        // Create edge with smooth curve
-        const newEdge = {
-          id: `edge-start-${newNodeId}`,
-          source: 'start',
-          target: newNodeId,
-          type: 'smoothstep',
-          animated: true,
-          style: {
-            stroke: LENS_COLORS[lensKey].color,
-            strokeWidth: 2.5
-          },
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            color: LENS_COLORS[lensKey].color,
-          },
-        };
+      // Update nodes: add new node and keep start node visible
+      setNodes((nds) => [...nds, newNode]);
+      setEdges((eds) => [...eds, newEdge]);
+      setUsedAIs((prev) => [...prev, aiKey]);
 
-        // Update nodes: add new node and keep start node visible
-        setNodes((nds) => [...nds, newNode]);
-        setEdges((eds) => [...eds, newEdge]);
-        setUsedAIs((prev) => [...prev, aiKey]);
-
-        // Perform API call
-        performAnalysis(newNodeId, aiKey, lensKey, null);
-
-        // Auto-pan to the new node
-        panToNode(newNodeId);
-
-        return updatedCounts;
-      });
+      // Perform API call
+      performAnalysis(newNodeId, aiKey, lensKey, null);
 
       return prevCounter + 1;
     });
@@ -519,66 +459,59 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
           // Get source node for recursive analysis
           const sourceNode = prevNodes.find(n => n.id === sourceNodeId);
           const previousAnalysis = sourceNode?.data.analysis;
-          const parentColumn = sourceNode?.data.column || 1;
-          const childColumn = parentColumn + 1; // Move one column to the right
 
-          // Calculate grid position based on column
-          setColumnCounts((prevCounts) => {
-            const newPosition = calculateGridPosition(childColumn);
-            const updatedCounts = { ...prevCounts, [childColumn]: (prevCounts[childColumn] || 0) + 1 };
+          // Calculate position (below and offset)
+          const sourcePosition = sourceNode?.position || { x: 550, y: 50 };
+          const newPosition = {
+            x: sourcePosition.x + (Math.random() * 200 - 100),
+            y: sourcePosition.y + 200
+          };
 
-            // Create new node at grid position
-            const newNode = {
-              id: newNodeId,
-              type: 'analysisNode',
-              position: newPosition,
-              data: {
-                aiModel: AI_MODELS[aiKey].name,
-                aiKey: aiKey,
-                lens: lensKey,
-                analysis: '',
-                status: 'generating',
-                isTyping: true,
-                isExpanded: true,
-                usedAIs: updatedUsedAIs,
-                column: childColumn, // Store column for future children
-                onBranch: (branchAI, branchLens) => {
-                  createBranchAnalysis(newNodeId, branchAI, branchLens);
-                }
-              },
-            };
+          // Create new node
+          const newNode = {
+            id: newNodeId,
+            type: 'analysisNode',
+            position: newPosition,
+            data: {
+              aiModel: AI_MODELS[aiKey].name,
+              aiKey: aiKey,
+              lens: lensKey,
+              analysis: '',
+              status: 'generating',
+              isTyping: true,
+              isExpanded: true,
+              usedAIs: updatedUsedAIs,
+              onBranch: (branchAI, branchLens) => {
+                createBranchAnalysis(newNodeId, branchAI, branchLens);
+              }
+            },
+          };
 
-            // Create edge with smooth curve and lens color
-            const newEdge = {
-              id: `edge-${sourceNodeId}-${newNodeId}`,
-              source: sourceNodeId,
-              target: newNodeId,
-              type: 'smoothstep',
-              animated: true,
-              style: {
-                stroke: LENS_COLORS[lensKey].color,
-                strokeWidth: 2.5
-              },
-              markerEnd: {
-                type: MarkerType.ArrowClosed,
-                color: LENS_COLORS[lensKey].color,
-              },
-            };
+          // Create edge with smooth curve and lens color
+          const newEdge = {
+            id: `edge-${sourceNodeId}-${newNodeId}`,
+            source: sourceNodeId,
+            target: newNodeId,
+            type: 'smoothstep',
+            animated: true,
+            style: {
+              stroke: LENS_COLORS[lensKey].color,
+              strokeWidth: 2.5
+            },
+            markerEnd: {
+              type: MarkerType.ArrowClosed,
+              color: LENS_COLORS[lensKey].color,
+            },
+          };
 
-            // Add edge
-            setEdges((prevEdges) => [...prevEdges, newEdge]);
+          // Add edge
+          setEdges((prevEdges) => [...prevEdges, newEdge]);
 
-            // Perform API call
-            performAnalysis(newNodeId, aiKey, lensKey, previousAnalysis);
+          // Perform API call
+          performAnalysis(newNodeId, aiKey, lensKey, previousAnalysis);
 
-            // Auto-pan to the new node
-            panToNode(newNodeId);
-
-            // Return new nodes array with new node added
-            return [...prevNodes, newNode];
-          });
-
-          return updatedCounts;
+          // Return new nodes array with new node added
+          return [...prevNodes, newNode];
         });
 
         return prevCounter + 1;
@@ -608,41 +541,11 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
         // Type out the analysis
         typeOutAnalysis(nodeId, data.analysis);
       } else {
-        setNodes((nds) =>
-          nds.map((node) => {
-            if (node.id === nodeId) {
-              return {
-                ...node,
-                data: {
-                  ...node.data,
-                  status: 'error',
-                  error: 'Analysis failed',
-                  onRetry: () => performAnalysis(nodeId, aiKey, lensKey, previousAnalysis)
-                }
-              };
-            }
-            return node;
-          })
-        );
+        updateNodeAnalysis(nodeId, 'Error: Analysis failed', false);
       }
     } catch (error) {
       console.error('Analysis error:', error);
-      setNodes((nds) =>
-        nds.map((node) => {
-          if (node.id === nodeId) {
-            return {
-              ...node,
-              data: {
-                ...node.data,
-                status: 'error',
-                error: 'Could not connect to AI',
-                onRetry: () => performAnalysis(nodeId, aiKey, lensKey, previousAnalysis)
-              }
-            };
-          }
-          return node;
-        })
-      );
+      updateNodeAnalysis(nodeId, 'Error: Could not connect to AI', false);
     }
   };
 
@@ -737,7 +640,6 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         nodeTypes={nodeTypes}
-        onInit={(instance) => { reactFlowInstance.current = instance; }}
         fitView
         className="react-flow-canvas"
       >

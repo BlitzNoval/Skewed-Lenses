@@ -190,14 +190,14 @@
   background: rgba(255, 255, 255, 0.05);
   color: #FFFFFF;
   border-width: 2px;
-  box-shadow: none;
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.1);
   transition: all 0.3s ease;
 }
 
 .confirm-button.enabled:hover {
   transform: translateY(-2px);
   background: rgba(255, 255, 255, 0.08);
-  box-shadow: none;
+  box-shadow: 0 6px 24px rgba(255, 255, 255, 0.2);
 }
 
 .confirm-button.disabled {
