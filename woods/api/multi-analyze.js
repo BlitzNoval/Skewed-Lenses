@@ -118,36 +118,64 @@ async function callOpenRouter(messages) {
 async function callGemini(messages) {
   const apiKey = process.env.GOOGLE_AI_KEY;
 
-  // Convert messages to Gemini format
-  const prompt = messages.map(m => m.content).join('\n\n');
-
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 500
-        }
-      })
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error(`Gemini API error: ${response.statusText}`);
+  if (!apiKey) {
+    throw new Error('GOOGLE_AI_KEY environment variable not set');
   }
 
-  const data = await response.json();
-  return data.candidates[0].content.parts[0].text;
+  // Convert messages to Gemini format - combine system and user messages
+  const systemMessage = messages.find(m => m.role === 'system');
+  const userMessage = messages.find(m => m.role === 'user');
+
+  let fullPrompt = '';
+  if (systemMessage) {
+    fullPrompt = `${systemMessage.content}\n\n${userMessage.content}`;
+  } else {
+    fullPrompt = userMessage.content;
+  }
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: fullPrompt
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 500,
+            topP: 0.95,
+            topK: 40
+          }
+        })
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Gemini API error response:', errorText);
+      throw new Error(`Gemini API error (${response.status}): ${errorText}`);
+    }
+
+    const data = await response.json();
+
+    // Check if response has expected structure
+    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+      console.error('Unexpected Gemini response structure:', JSON.stringify(data));
+      throw new Error('Unexpected response structure from Gemini API');
+    }
+
+    return data.candidates[0].content.parts[0].text;
+  } catch (error) {
+    console.error('Gemini API call failed:', error);
+    throw error;
+  }
 }
 
 // Route API call based on model
