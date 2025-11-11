@@ -8,11 +8,11 @@ const AI_MODELS = {
 };
 
 const LENS_COLORS = {
-  clinical: { color: '#00BFA6', name: 'Clinical', icon: '🏥' },
-  educational: { color: '#F4C542', name: 'Educational', icon: '📚' },
-  empathetic: { color: '#FF8FA3', name: 'Empathetic', icon: '❤️' },
-  technical: { color: '#9EA0A6', name: 'Technical', icon: '🔬' },
-  cultural: { color: '#A78BFA', name: 'Cultural', icon: '🌍' },
+  clinical: { color: '#00BFA6', name: 'Clinical' },
+  educational: { color: '#F4C542', name: 'Educational' },
+  empathetic: { color: '#FF8FA3', name: 'Empathetic' },
+  technical: { color: '#9EA0A6', name: 'Technical' },
+  cultural: { color: '#A78BFA', name: 'Cultural' },
 };
 
 function StartNode({ data }) {
@@ -53,7 +53,7 @@ function StartNode({ data }) {
         </div>
         {selectedAI && (
           <div className="selected-indicator">
-            ✓ {AI_MODELS[selectedAI].name} selected
+            {AI_MODELS[selectedAI].name} selected
           </div>
         )}
       </div>
@@ -69,24 +69,43 @@ function StartNode({ data }) {
               onClick={() => setSelectedLens(key)}
               style={{
                 borderColor: selectedLens === key ? lens.color : 'rgba(255,255,255,0.2)',
-                boxShadow: selectedLens === key ? `0 0 12px ${lens.color}60` : 'none'
+                boxShadow: selectedLens === key ? `0 0 12px ${lens.color}60` : 'none',
+                color: selectedLens === key ? lens.color : '#FFFFFF'
               }}
             >
-              <span className="lens-icon">{lens.icon}</span>
-              <span className="lens-name">{lens.name}</span>
+              <span className="lens-name">{lens.name.toUpperCase()}</span>
             </button>
           ))}
         </div>
         {selectedLens && (
           <div className="selected-indicator" style={{ color: LENS_COLORS[selectedLens].color }}>
-            ✓ {LENS_COLORS[selectedLens].name} selected
+            {LENS_COLORS[selectedLens].name.toUpperCase()} selected
           </div>
         )}
       </div>
 
+      {/* Confirmation Summary */}
+      {isConfirmEnabled && (
+        <div className="confirmation-summary">
+          <div className="summary-row">
+            <span className="summary-label">AI Model:</span>
+            <span className="summary-value">{AI_MODELS[selectedAI].name}</span>
+          </div>
+          <div className="summary-row">
+            <span className="summary-label">Lens:</span>
+            <span className="summary-value" style={{ color: LENS_COLORS[selectedLens].color }}>
+              {LENS_COLORS[selectedLens].name.toUpperCase()}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Confirm Button */}
       <button
         className={`confirm-button ${isConfirmEnabled ? 'enabled' : 'disabled'}`}
+        style={{
+          borderColor: isConfirmEnabled ? LENS_COLORS[selectedLens]?.color : 'transparent',
+        }}
         onClick={handleConfirm}
         disabled={!isConfirmEnabled}
       >

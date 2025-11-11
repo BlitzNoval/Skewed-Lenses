@@ -13,11 +13,11 @@ import StartNode from './StartNode';
 
 // Lens color palette
 const LENS_COLORS = {
-  clinical: { color: '#00BFA6', name: 'Clinical', icon: '🏥' },
-  educational: { color: '#F4C542', name: 'Educational', icon: '📚' },
-  empathetic: { color: '#FF8FA3', name: 'Empathetic', icon: '❤️' },
-  technical: { color: '#9EA0A6', name: 'Technical', icon: '🔬' },
-  cultural: { color: '#A78BFA', name: 'Cultural', icon: '🌍' },
+  clinical: { color: '#00BFA6', name: 'Clinical' },
+  educational: { color: '#F4C542', name: 'Educational' },
+  empathetic: { color: '#FF8FA3', name: 'Empathetic' },
+  technical: { color: '#9EA0A6', name: 'Technical' },
+  cultural: { color: '#A78BFA', name: 'Cultural' },
 };
 
 // AI Models
@@ -29,13 +29,12 @@ const AI_MODELS = {
 
 // Custom Node Component
 function AnalysisNode({ data }) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(data.isExpanded || false);
   const [showControls, setShowControls] = useState(false);
   const [showAISelector, setShowAISelector] = useState(false);
   const [showLensSelector, setShowLensSelector] = useState(false);
 
   const lensColor = LENS_COLORS[data.lens]?.color || '#FFFFFF';
-  const lensIcon = LENS_COLORS[data.lens]?.icon || '';
   const lensName = LENS_COLORS[data.lens]?.name || '';
 
   const handleExpand = () => {
@@ -48,10 +47,11 @@ function AnalysisNode({ data }) {
 
   return (
     <div
-      className={`analysis-node ${isExpanded ? 'expanded' : ''} ${data.isDimmed ? 'dimmed' : ''}`}
+      className={`analysis-node ${isExpanded ? 'expanded' : ''} ${data.isDimmed ? 'dimmed' : ''} ${data.status === 'generating' ? 'generating' : ''} ${data.completionFlash ? 'completion-flash' : ''}`}
       style={{
-        borderColor: `rgba(${parseInt(lensColor.slice(1, 3), 16)}, ${parseInt(lensColor.slice(3, 5), 16)}, ${parseInt(lensColor.slice(5, 7), 16)}, 0.6)`,
-        boxShadow: isExpanded ? `0 0 20px ${lensColor}40` : 'none'
+        borderColor: lensColor,
+        boxShadow: isExpanded ? `0 0 20px ${lensColor}40` : 'none',
+        color: lensColor // For the completion flash animation
       }}
     >
       {/* Collapsed View */}
@@ -61,19 +61,32 @@ function AnalysisNode({ data }) {
       >
         <div className="node-title">
           <span className="ai-name">{data.aiModel}</span>
-          <span className="lens-pill" style={{ background: lensColor }}>
-            {lensIcon} {lensName}
+          <span className="node-divider">•</span>
+          <span className="lens-name" style={{ color: lensColor }}>
+            {lensName.toUpperCase()}
           </span>
         </div>
         <div className="node-status">
-          {data.status === 'generating' && <span className="status-icon">⏳</span>}
-          {data.status === 'complete' && <span className="status-icon">✔️</span>}
+          {data.status === 'generating' && (
+            <div className="generating-indicator">
+              <span className="shimmer-dot"></span>
+              <span className="shimmer-dot"></span>
+              <span className="shimmer-dot"></span>
+            </div>
+          )}
+          {data.status === 'complete' && <span className="status-checkmark">✓</span>}
         </div>
       </div>
 
       {/* Expanded View */}
       {isExpanded && (
         <div className="node-content">
+          {data.status === 'generating' && !data.analysis && (
+            <div className="loading-feedback">
+              <p>Analyzing your benchmark results...</p>
+              <p className="loading-subtext">Processing through the {lensName} lens<span className="loading-dots">...</span></p>
+            </div>
+          )}
           <div className="node-analysis">
             {data.isTyping ? (
               <>
@@ -81,89 +94,96 @@ function AnalysisNode({ data }) {
                 <span className="typing-cursor">▊</span>
               </>
             ) : (
-              data.analysis || 'No analysis yet...'
+              data.analysis || (data.status === 'generating' ? '' : 'No analysis yet...')
             )}
           </div>
 
-          {data.status === 'complete' && !data.isTyping && (
-            <div className="node-actions">
+          {data.status === 'complete' && !data.isTyping && !showControls && !showAISelector && !showLensSelector && (
+            <div className="branch-buttons-container">
               <button
-                className="node-action-btn"
+                className="branch-btn"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setShowControls(!showControls);
+                  setShowAISelector(true);
                 }}
+                title="Add New AI"
               >
-                + Branch Analysis
-              </button>
-            </div>
-          )}
-
-          {/* Inline Control Panel */}
-          {showControls && (
-            <div className="inline-controls" onClick={(e) => e.stopPropagation()}>
-              <button
-                className="control-option"
-                onClick={() => {
-                  setShowAISelector(!showAISelector);
-                  setShowLensSelector(false);
-                }}
-              >
-                + New AI
+                <span className="branch-icon">+</span> New AI
               </button>
               <button
-                className="control-option"
-                onClick={() => {
-                  setShowLensSelector(!showLensSelector);
-                  setShowAISelector(false);
+                className="branch-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowLensSelector(true);
                 }}
+                title="Change Lens"
               >
-                + New Lens
+                <span className="branch-icon">+</span> New Lens
               </button>
             </div>
           )}
 
           {/* AI Selector Strip */}
           {showAISelector && (
-            <div className="selector-strip" onClick={(e) => e.stopPropagation()}>
-              {Object.entries(AI_MODELS)
-                .filter(([key]) => !data.usedAIs?.includes(key))
-                .map(([key, model]) => (
-                  <button
-                    key={key}
-                    className="selector-chip"
-                    onClick={() => {
-                      data.onSelectAI?.(key);
-                      setShowAISelector(false);
-                      setShowControls(false);
-                    }}
-                  >
-                    {model.name}
-                  </button>
-                ))}
+            <div className="selector-container" onClick={(e) => e.stopPropagation()}>
+              <div className="selector-header">
+                <span className="selector-title">Select AI Model</span>
+                <button
+                  className="selector-close"
+                  onClick={() => setShowAISelector(false)}
+                >
+                  ×
+                </button>
+              </div>
+              <div className="selector-strip">
+                {Object.entries(AI_MODELS)
+                  .filter(([key]) => !data.usedAIs?.includes(key))
+                  .map(([key, model]) => (
+                    <button
+                      key={key}
+                      className="selector-chip"
+                      onClick={() => {
+                        data.onSelectAI?.(key);
+                        setShowAISelector(false);
+                      }}
+                    >
+                      {model.name}
+                    </button>
+                  ))}
+              </div>
             </div>
           )}
 
           {/* Lens Selector Strip */}
           {showLensSelector && (
-            <div className="selector-strip" onClick={(e) => e.stopPropagation()}>
-              {Object.entries(LENS_COLORS).map(([key, lens]) => (
+            <div className="selector-container" onClick={(e) => e.stopPropagation()}>
+              <div className="selector-header">
+                <span className="selector-title">Select Lens</span>
                 <button
-                  key={key}
-                  className="selector-chip lens-chip"
-                  style={{
-                    background: lens.color,
-                    border: data.lens === key ? '2px solid white' : 'none'
-                  }}
-                  onClick={() => {
-                    data.onSelectLens?.(key);
-                    setShowLensSelector(false);
-                    setShowControls(false);
-                  }}
+                  className="selector-close"
+                  onClick={() => setShowLensSelector(false)}
                 >
-                  {lens.icon} {lens.name}
+                  ×
                 </button>
-              ))}
+              </div>
+              <div className="selector-strip">
+                {Object.entries(LENS_COLORS).map(([key, lens]) => (
+                  <button
+                    key={key}
+                    className="selector-chip lens-chip"
+                    style={{
+                      background: lens.color,
+                      border: data.lens === key ? '2px solid white' : 'none'
+                    }}
+                    onClick={() => {
+                      data.onSelectLens?.(key);
+                      setShowLensSelector(false);
+                    }}
+                  >
+                    {lens.name.toUpperCase()}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -209,11 +229,11 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
     setNodeIdCounter(nodeIdCounter + 1);
     setUsedAIs([...usedAIs, aiKey]);
 
-    // Create new node
+    // Create new node - position horizontally beside Start card
     const newNode = {
       id: newNodeId,
       type: 'analysisNode',
-      position: { x: 250, y: 250 },
+      position: { x: 550, y: 50 },
       data: {
         aiModel: AI_MODELS[aiKey].name,
         aiKey: aiKey,
@@ -221,6 +241,7 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
         analysis: '',
         status: 'generating',
         isTyping: true,
+        isExpanded: true, // Auto-expand first node
         usedAIs: [aiKey],
         onSelectAI: (newAI) => createBranchAnalysis(newNodeId, newAI, lensKey, false),
         onSelectLens: (newLens) => createBranchAnalysis(newNodeId, aiKey, newLens, true)
@@ -244,6 +265,7 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
       },
     };
 
+    // Update nodes: add new node and keep start node visible
     setNodes((nds) => [...nds, newNode]);
     setEdges((eds) => [...eds, newEdge]);
 
@@ -344,13 +366,15 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
         setNodes((nds) =>
           nds.map((node) => {
             if (node.id === nodeId) {
+              const isComplete = index >= fullText.length;
               return {
                 ...node,
                 data: {
                   ...node.data,
                   analysis: fullText.substring(0, index),
-                  isTyping: index < fullText.length,
-                  status: index < fullText.length ? 'generating' : 'complete'
+                  isTyping: !isComplete,
+                  status: isComplete ? 'complete' : 'generating',
+                  completionFlash: isComplete // Trigger flash on completion
                 }
               };
             }
@@ -360,6 +384,23 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
         index += 2; // Type 2 chars at a time
       } else {
         clearInterval(interval);
+        // Remove flash class after animation completes
+        setTimeout(() => {
+          setNodes((nds) =>
+            nds.map((node) => {
+              if (node.id === nodeId) {
+                return {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    completionFlash: false
+                  }
+                };
+              }
+              return node;
+            })
+          );
+        }, 600);
       }
     }, 15);
   };
