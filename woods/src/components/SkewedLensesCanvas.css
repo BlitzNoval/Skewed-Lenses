@@ -411,6 +411,36 @@
   white-space: pre-wrap;
 }
 
+/* Error State */
+.error-state {
+  padding: 20px;
+  text-align: center;
+}
+
+.error-message {
+  color: #FF6B6B;
+  font-size: 0.9rem;
+  margin: 0 0 16px 0;
+  font-weight: 500;
+}
+
+.retry-btn {
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid #FF6B6B;
+  color: #FF6B6B;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.retry-btn:hover {
+  background: rgba(255, 107, 107, 0.2);
+  transform: translateY(-1px);
+}
+
 /* Custom scrollbar */
 .node-analysis::-webkit-scrollbar {
   width: 4px;

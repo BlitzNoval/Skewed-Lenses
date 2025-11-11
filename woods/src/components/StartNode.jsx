@@ -30,7 +30,7 @@ function StartNode({ data }) {
   return (
     <div className="start-node-card">
       <div className="start-header">
-        <h3>Start</h3>
+        <h3>Start Analysis</h3>
         <p className="start-subtext">Your benchmark results are ready for analysis.</p>
       </div>
 
@@ -108,8 +108,9 @@ function StartNode({ data }) {
         }}
         onClick={handleConfirm}
         disabled={!isConfirmEnabled}
+        title={!isConfirmEnabled ? "Select AI model and lens before generating" : ""}
       >
-        Confirm and Generate
+        Confirm & Generate
       </button>
     </div>
   );
