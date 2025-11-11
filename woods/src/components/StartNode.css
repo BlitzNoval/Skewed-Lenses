@@ -1,0 +1,176 @@
+/* Start Node Card Styling */
+.start-node-card {
+  background: #101010;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 24px;
+  min-width: 450px;
+  max-width: 500px;
+}
+
+.start-header h3 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #FFFFFF;
+  margin: 0 0 8px 0;
+}
+
+.start-subtext {
+  font-size: 0.95rem;
+  color: #999999;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.start-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 20px 0;
+}
+
+/* Selection Sections */
+.selection-section {
+  margin-bottom: 24px;
+}
+
+.selection-label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #DADADA;
+  margin-bottom: 12px;
+  letter-spacing: 0.02em;
+}
+
+/* AI Chips */
+.ai-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ai-chip {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.ai-chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.ai-chip.selected {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #FFFFFF;
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.2);
+}
+
+.chip-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #FFFFFF;
+  margin-bottom: 4px;
+}
+
+.chip-desc {
+  font-size: 0.85rem;
+  color: #999999;
+}
+
+/* Lens Chips */
+.lens-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.lens-chip {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+}
+
+.lens-chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateY(-1px);
+}
+
+.lens-chip.selected {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.lens-icon {
+  font-size: 1.2rem;
+}
+
+.lens-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #FFFFFF;
+}
+
+/* Selected Indicator */
+.selected-indicator {
+  margin-top: 12px;
+  font-size: 0.9rem;
+  color: #4CAF50;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Confirm Button */
+.confirm-button {
+  width: 100%;
+  padding: 14px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 8px;
+}
+
+.confirm-button.enabled {
+  background: linear-gradient(135deg, #FFFFFF 0%, #E0E0E0 100%);
+  color: #0B0B0B;
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.2);
+}
+
+.confirm-button.enabled:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(255, 255, 255, 0.3);
+}
+
+.confirm-button.disabled {
+  background: rgba(255, 255, 255, 0.1);
+  color: #666666;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .start-node-card {
+    min-width: 320px;
+    max-width: 100%;
+  }
+
+  .lens-chips {
+    grid-template-columns: 1fr 1fr;
+  }
+}

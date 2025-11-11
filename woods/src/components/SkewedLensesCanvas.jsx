@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import ReactFlow, {
-  MiniMap,
   Controls,
   Background,
   useNodesState,
@@ -10,6 +9,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import './SkewedLensesCanvas.css';
+import StartNode from './StartNode';
 
 // Lens color palette
 const LENS_COLORS = {
@@ -174,7 +174,10 @@ function AnalysisNode({ data }) {
 
 // Main Canvas Component
 function SkewedLensesCanvas({ benchmarkData, onClose }) {
-  const nodeTypes = useMemo(() => ({ analysisNode: AnalysisNode }), []);
+  const nodeTypes = useMemo(() => ({
+    analysisNode: AnalysisNode,
+    startNode: StartNode
+  }), []);
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -189,42 +192,16 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
     if (nodes.length === 0) {
       const startNode = {
         id: 'start',
-        type: 'analysisNode',
+        type: 'startNode',
         position: { x: 250, y: 50 },
         data: {
-          aiModel: 'Start',
-          lens: null,
-          analysis: 'Your benchmark results are ready for analysis.',
-          status: 'complete',
-          isStart: true,
-          onSelectAI: handleInitialAISelect,
-          onSelectLens: () => {},
-          usedAIs: []
+          onConfirm: (aiKey, lensKey) => {
+            createFirstAnalysis(aiKey, lensKey);
+          }
         },
       };
       setNodes([startNode]);
     }
-  }, []);
-
-  const handleInitialAISelect = useCallback((aiKey) => {
-    setSelectedAIForNew(aiKey);
-    setShowInitialStart(false);
-    // Show lens selector on start node
-    setNodes((nds) =>
-      nds.map((node) => {
-        if (node.id === 'start') {
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              showLensSelector: true,
-              onSelectLens: (lensKey) => createFirstAnalysis(aiKey, lensKey)
-            }
-          };
-        }
-        return node;
-      })
-    );
   }, []);
 
   const createFirstAnalysis = async (aiKey, lensKey) => {
@@ -413,10 +390,11 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
 
   return (
     <div className="skewed-canvas-container">
-      {/* Top Bar */}
+      {/* Top Bar - Back Button Only */}
       <div className="canvas-header">
-        <h1>Skewed Lenses</h1>
-        <button className="close-btn" onClick={onClose}>← Back</button>
+        <button className="close-btn" onClick={onClose}>
+          <span>←</span> Back
+        </button>
       </div>
 
       {/* React Flow Canvas */}
@@ -432,19 +410,7 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
       >
         <Background color="#FFFFFF" gap={40} size={1} style={{ opacity: 0.03 }} />
         <Controls />
-        <MiniMap
-          nodeColor={(node) => {
-            const lens = node.data?.lens;
-            return lens ? LENS_COLORS[lens]?.color : '#1A1A1A';
-          }}
-          style={{ background: '#0B0B0B', border: '1px solid rgba(255,255,255,0.1)' }}
-        />
       </ReactFlow>
-
-      {/* Philosophical Quote */}
-      <div className="canvas-footer">
-        "There are infinite ways to read a single line."
-      </div>
     </div>
   );
 }

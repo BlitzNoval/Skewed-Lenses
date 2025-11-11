@@ -363,25 +363,9 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-/* ===== CANVAS FOOTER ===== */
+/* ===== CANVAS FOOTER - REMOVED ===== */
 .canvas-footer {
-  position: absolute;
-  bottom: 32px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 1rem;
-  font-style: italic;
-  color: rgba(255, 255, 255, 0.25);
-  z-index: 5;
-  pointer-events: none;
-  text-align: center;
-  font-weight: 300;
-  letter-spacing: 0.02em;
-  transition: opacity 0.3s ease;
-}
-
-.canvas-footer:hover {
-  opacity: 1;
+  display: none;
 }
 
 /* ===== RESPONSIVE DESIGN ===== */
@@ -407,17 +391,7 @@
   }
 }
 
-/* ===== MINIMAP CUSTOMIZATION ===== */
+/* ===== MINIMAP - HIDDEN ===== */
 .react-flow__minimap {
-  background: var(--bg-card) !important;
-  border: 1px solid var(--border-subtle) !important;
-}
-
-.react-flow__minimap-mask {
-  fill: rgba(11, 11, 11, 0.8) !important;
-}
-
-.react-flow__minimap-node {
-  fill: #1A1A1A !important;
-  stroke: var(--border-subtle) !important;
+  display: none !important;
 }
