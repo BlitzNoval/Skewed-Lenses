@@ -10,7 +10,6 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import './SkewedLensesCanvas.css';
 import StartNode from './StartNode';
-import AIDiscussionRailway from './AIDiscussionRailway';
 
 // Lens color palette
 const LENS_COLORS = {
@@ -378,24 +377,162 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
   const [selectedLensForNew, setSelectedLensForNew] = useState('clinical');
   const [selectedAIForNew, setSelectedAIForNew] = useState(null);
   const [showInitialStart, setShowInitialStart] = useState(true);
-  const [showDiscussion, setShowDiscussion] = useState(false);
 
-  // Initialize with start node
+  // AI Discussion state
+  const [discussionMode, setDiscussionMode] = useState(false);
+  const [conversationHistory, setConversationHistory] = useState([]);
+  const [currentSpeaker, setCurrentSpeaker] = useState(null);
+  const [discussionActive, setDiscussionActive] = useState(false);
+  const [discussionComplete, setDiscussionComplete] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
+  const TURN_ORDER = ['llama', 'openrouter', 'gemini'];
+
+  // Initialize AI discussion on load
   React.useEffect(() => {
-    if (nodes.length === 0) {
-      const startNode = {
-        id: 'start',
-        type: 'startNode',
-        position: { x: 250, y: 50 },
-        data: {
-          onConfirm: (aiKey, lensKey) => {
-            createFirstAnalysis(aiKey, lensKey);
-          }
-        },
-      };
-      setNodes([startNode]);
+    if (nodes.length === 0 && !discussionMode) {
+      startAIDiscussion();
     }
   }, []);
+
+  // Start AI Discussion - Create 3 anchor nodes
+  const startAIDiscussion = () => {
+    setDiscussionMode(true);
+    setStatusMessage('Three AI systems are now discussing your reading results...');
+
+    // Create 3 AI anchor nodes vertically aligned on the left
+    const anchorNodes = Object.entries(AI_MODELS).map(([key, config], index) => ({
+      id: `anchor-${key}`,
+      type: 'analysisNode',
+      position: { x: 50, y: index * 250 + 100 },
+      data: {
+        aiModel: config.name,
+        aiKey: key,
+        lens: 'discussion',
+        analysis: '',
+        status: 'waiting',
+        isTyping: false,
+        isExpanded: true,
+        isAnchor: true,
+        color: key === 'llama' ? '#06D6A0' : key === 'openrouter' ? '#3A86FF' : '#C77DFF'
+      },
+      draggable: false
+    }));
+
+    setNodes(anchorNodes);
+
+    // Start the conversation after a brief delay
+    setTimeout(() => conductAITurn(0), 1500);
+  };
+
+  // Conduct a single AI turn
+  const conductAITurn = async (turnNumber) => {
+    if (turnNumber >= 9) {
+      endAIDiscussion();
+      return;
+    }
+
+    const modelKey = TURN_ORDER[turnNumber % 3];
+    const config = AI_MODELS[modelKey];
+
+    setCurrentSpeaker(modelKey);
+    setStatusMessage(`Now speaking: ${config.name}`);
+
+    // Update anchor node to show it's active
+    setNodes(prevNodes =>
+      prevNodes.map(node => ({
+        ...node,
+        data: {
+          ...node.data,
+          status: node.id === `anchor-${modelKey}` ? 'generating' : 'waiting'
+        }
+      }))
+    );
+
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    try {
+      const response = await fetch('/api/discussion-turn', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: modelKey,
+          conversationHistory,
+          benchmarkData,
+          turnNumber
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.message) {
+        const newMessage = {
+          role: 'assistant',
+          content: data.message,
+          model: modelKey,
+          turnNumber
+        };
+
+        setConversationHistory(prev => [...prev, newMessage]);
+
+        // Create message node
+        const messageNode = {
+          id: `msg-${turnNumber}`,
+          type: 'analysisNode',
+          position: {
+            x: 350 + (Math.floor(turnNumber / 3) * 350),
+            y: (turnNumber % 3) * 250 + 100
+          },
+          data: {
+            aiModel: config.name,
+            aiKey: modelKey,
+            lens: 'discussion',
+            analysis: data.message,
+            status: 'complete',
+            isTyping: false,
+            isExpanded: true,
+            turnNumber,
+            color: modelKey === 'llama' ? '#06D6A0' : modelKey === 'openrouter' ? '#3A86FF' : '#C77DFF'
+          },
+          draggable: true
+        };
+
+        // Create edge from anchor to message
+        const newEdge = {
+          id: `edge-${turnNumber}`,
+          source: `anchor-${modelKey}`,
+          target: `msg-${turnNumber}`,
+          type: 'smoothstep',
+          animated: false,
+          style: {
+            stroke: modelKey === 'llama' ? '#06D6A0' : modelKey === 'openrouter' ? '#3A86FF' : '#C77DFF',
+            strokeWidth: 2
+          },
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            color: modelKey === 'llama' ? '#06D6A0' : modelKey === 'openrouter' ? '#3A86FF' : '#C77DFF'
+          }
+        };
+
+        setNodes(prev => [...prev, messageNode]);
+        setEdges(prev => [...prev, newEdge]);
+
+        setTimeout(() => conductAITurn(turnNumber + 1), 2000);
+      } else {
+        console.error('Turn error:', data.error);
+        setTimeout(() => conductAITurn(turnNumber + 1), 2000);
+      }
+    } catch (error) {
+      console.error('Network error:', error);
+      setTimeout(() => conductAITurn(turnNumber + 1), 2000);
+    }
+  };
+
+  const endAIDiscussion = () => {
+    setDiscussionActive(false);
+    setDiscussionComplete(true);
+    setCurrentSpeaker(null);
+    setStatusMessage('Discussion complete. The AIs showed differing perspectives on your results.');
+  };
 
   const createFirstAnalysis = (aiKey, lensKey) => {
     setNodeIdCounter((prevCounter) => {
@@ -627,26 +764,14 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
 
   return (
     <div className="skewed-canvas-container">
-      {/* Render AI Discussion Railway if active */}
-      {showDiscussion && (
-        <AIDiscussionRailway
-          benchmarkData={benchmarkData}
-          onClose={() => setShowDiscussion(false)}
-        />
-      )}
-
-      {/* Top Bar - Back Button and AI Discussion Button */}
+      {/* Top Bar - Back Button Only */}
       <div className="canvas-header">
         <button className="close-btn" onClick={onClose}>
           <span>←</span> Back
         </button>
-        <button
-          className="discussion-btn"
-          onClick={() => setShowDiscussion(true)}
-          title="Launch AI Discussion"
-        >
-          <span>🤖</span> AI Discussion
-        </button>
+        {statusMessage && (
+          <div className="status-message">{statusMessage}</div>
+        )}
       </div>
 
       {/* React Flow Canvas */}
