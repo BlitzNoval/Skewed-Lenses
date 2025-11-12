@@ -4,6 +4,20 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY
 });
 
+// Unified System Prompt Template
+const UNIFIED_SYSTEM_PROMPT = `You are an AI system participating in a roundtable discussion with two other AI systems.
+Each of you has been given identical benchmark data describing a student's reading performance.
+
+Your goal is to interpret what the data might suggest about the student's reading ability and learning patterns.
+You should consider what the numbers could mean, not just what they are.
+
+Speak conversationally, as if contributing to a discussion, not delivering a report.
+Refer to the other models' ideas if they've spoken before you — you can agree, disagree, or elaborate.
+Keep your contribution under five sentences (3-5 sentences total).
+
+Based on this data, what insights or patterns stand out to you?
+What do these results tell you about the student — and about how assessment data might be interpreted?`;
+
 // AI Model Configurations
 const AI_MODELS = {
   llama: {
@@ -11,33 +25,21 @@ const AI_MODELS = {
     color: '#06D6A0',
     provider: 'groq',
     model: 'llama-3.1-8b-instant',
-    systemPrompt: `You are Llama, participating in a three-AI discussion about reading benchmark results.
-You can reference the other AIs (OpenRouter and Gemini) and their statements by name.
-Respond naturally in paragraph form (2-5 sentences).
-Focus on technical patterns and data-centric analysis.
-Do not summarize or conclude - just contribute your perspective.`
+    personality: 'technical and data-focused'
   },
   openrouter: {
     name: 'OpenRouter GPT',
     color: '#3A86FF',
     provider: 'openrouter',
     model: 'openai/gpt-oss-20b:free',
-    systemPrompt: `You are OpenRouter GPT, participating in a three-AI discussion about reading benchmark results.
-You can reference the other AIs (Llama and Gemini) and their statements by name.
-Respond naturally in paragraph form (2-5 sentences).
-Focus on warm, interpretive reasoning and balanced critique.
-Do not summarize or conclude - just contribute your perspective.`
+    personality: 'warm and interpretive'
   },
   gemini: {
     name: 'Gemini',
     color: '#C77DFF',
     provider: 'google',
     model: 'gemini-2.0-flash-exp',
-    systemPrompt: `You are Gemini, participating in a three-AI discussion about reading benchmark results.
-You can reference the other AIs (Llama and OpenRouter) and their statements by name.
-Respond naturally in paragraph form (2-5 sentences).
-Focus on formal, academic interpretation and contextual understanding.
-Do not summarize or conclude - just contribute your perspective.`
+    personality: 'formal and academic'
   }
 };
 
@@ -46,8 +48,8 @@ async function callGroq(messages) {
   const response = await groq.chat.completions.create({
     messages,
     model: 'llama-3.1-8b-instant',
-    temperature: 0.8,
-    max_tokens: 300
+    temperature: 0.7,
+    max_tokens: 150
   });
   return response.choices[0].message.content;
 }
@@ -65,8 +67,8 @@ async function callOpenRouter(messages) {
     body: JSON.stringify({
       model: 'openai/gpt-oss-20b:free',
       messages,
-      temperature: 0.8,
-      max_tokens: 300
+      temperature: 0.7,
+      max_tokens: 150
     })
   });
 
@@ -112,8 +114,8 @@ async function callGemini(messages) {
             }]
           }],
           generationConfig: {
-            temperature: 0.8,
-            maxOutputTokens: 300,
+            temperature: 0.7,
+            maxOutputTokens: 150,
             topP: 0.95,
             topK: 40
           }
@@ -186,10 +188,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing benchmark data' });
     }
 
-    // Build context prompt for first turn
-    let contextPrompt = '';
-    if (turnNumber === 0) {
-      contextPrompt = `READING BENCHMARK RESULTS:
+    // Build benchmark data context
+    const benchmarkContext = `READING BENCHMARK RESULTS:
 
 Benchmark 1 (Oral Reading Fluency):
 - Fluency Score: ${benchmarkData.benchmark1?.fluencyScore?.correct || 0}/${benchmarkData.benchmark1?.fluencyScore?.total || 0} (${benchmarkData.benchmark1?.fluencyScore?.percentage || 0}%)
@@ -198,18 +198,25 @@ Benchmark 1 (Oral Reading Fluency):
 Benchmark 2 (Reading Pace):
 - Words Per Minute: ${benchmarkData.benchmark2?.wordsPerMinute || 0}
 - Completion Rate: ${benchmarkData.benchmark2?.completionRate || 0}%
-- Skip Rate: ${benchmarkData.benchmark2?.skipRate || 0}%
+- Skip Rate: ${benchmarkData.benchmark2?.skipRate || 0}%`;
 
-Begin the discussion by sharing your initial interpretation of these results.`;
+    // Calculate round number
+    const roundNumber = Math.floor(turnNumber / 3) + 1;
+    const speakerName = AI_MODELS[model].name;
+
+    // Build context prompt with round indicator
+    let contextPrompt = '';
+    if (turnNumber === 0) {
+      contextPrompt = `${benchmarkContext}\n\nRound ${roundNumber} — Now speaking: ${speakerName}\nBegin the discussion by sharing your initial interpretation of these results.`;
     } else {
-      contextPrompt = `Continue the discussion. You can reference what the other AIs have said and build on or challenge their points.`;
+      contextPrompt = `Round ${roundNumber} — Now speaking: ${speakerName}\nContinue the discussion. You can reference what the other AIs have said and build on or challenge their points.`;
     }
 
-    // Build messages array
+    // Build messages array with unified system prompt
     const messages = [
       {
         role: 'system',
-        content: AI_MODELS[model].systemPrompt
+        content: UNIFIED_SYSTEM_PROMPT
       },
       ...conversationHistory,
       {
