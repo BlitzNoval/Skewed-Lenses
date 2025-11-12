@@ -425,7 +425,8 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
           role: 'assistant',
           content: data.message,
           model: modelKey,
-          turnNumber
+          turnNumber,
+          messageId: `msg-${turnNumber}`
         };
 
         setConversationHistory(prev => [...prev, newMessage]);
@@ -452,25 +453,119 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
           draggable: true
         };
 
-        // Create edge from anchor to message
-        const newEdge = {
-          id: `edge-${turnNumber}`,
+        setNodes(prev => [...prev, messageNode]);
+
+        // Smart reply detection - build conversation connectors
+        const myColor = modelKey === 'llama' ? '#06D6A0' : modelKey === 'openrouter' ? '#3A86FF' : '#C77DFF';
+        const conversationEdges = [];
+
+        // 1. Anchor edge (always connect to AI avatar)
+        conversationEdges.push({
+          id: `anchor-${turnNumber}`,
           source: `anchor-${modelKey}`,
           target: `msg-${turnNumber}`,
           type: 'smoothstep',
           animated: false,
-          style: {
-            stroke: modelKey === 'llama' ? '#06D6A0' : modelKey === 'openrouter' ? '#3A86FF' : '#C77DFF',
-            strokeWidth: 2
-          },
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            color: modelKey === 'llama' ? '#06D6A0' : modelKey === 'openrouter' ? '#3A86FF' : '#C77DFF'
-          }
-        };
+          style: { stroke: myColor, strokeWidth: 2, opacity: 0.3 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: myColor }
+        });
 
-        setNodes(prev => [...prev, messageNode]);
-        setEdges(prev => [...prev, newEdge]);
+        // 2. Detect direct AI mentions (strongest connection)
+        const references = detectAIReferences(data.message);
+        const directReplies = new Set();
+
+        references.forEach(refName => {
+          const referencedAI =
+            refName.toLowerCase().includes('llama') ? 'llama' :
+            refName.toLowerCase().includes('gemini') ? 'gemini' :
+            refName.toLowerCase().includes('openrouter') || refName.toLowerCase().includes('gpt') ? 'openrouter' : null;
+
+          if (referencedAI && referencedAI !== modelKey) {
+            // Find most recent message from that AI
+            for (let i = turnNumber - 1; i >= 0; i--) {
+              const prevAI = TURN_ORDER[i % 3];
+              if (prevAI === referencedAI) {
+                directReplies.add(`msg-${i}`);
+                conversationEdges.push({
+                  id: `direct-${turnNumber}-${i}`,
+                  source: `msg-${i}`,
+                  target: `msg-${turnNumber}`,
+                  type: 'smoothstep',
+                  animated: true,
+                  style: {
+                    stroke: myColor,
+                    strokeWidth: 2.5,
+                    strokeDasharray: '0', // Solid line for direct mention
+                    opacity: 0.8
+                  },
+                  markerEnd: {
+                    type: MarkerType.ArrowClosed,
+                    color: myColor,
+                    width: 20,
+                    height: 20
+                  },
+                  label: '💬',
+                  labelBgStyle: { fill: 'transparent' }
+                });
+                break;
+              }
+            }
+          }
+        });
+
+        // 3. Sequential reply (responding to immediate previous turn)
+        if (turnNumber > 0) {
+          const prevMessageId = `msg-${turnNumber - 1}`;
+          if (!directReplies.has(prevMessageId)) {
+            conversationEdges.push({
+              id: `seq-${turnNumber}`,
+              source: prevMessageId,
+              target: `msg-${turnNumber}`,
+              type: 'smoothstep',
+              animated: false,
+              style: {
+                stroke: myColor,
+                strokeWidth: 1.5,
+                strokeDasharray: '5,5', // Dashed for sequential
+                opacity: 0.5
+              },
+              markerEnd: {
+                type: MarkerType.ArrowClosed,
+                color: myColor,
+                width: 15,
+                height: 15
+              }
+            });
+          }
+        }
+
+        // 4. Contextual connections (aware of earlier messages, very subtle)
+        if (turnNumber >= 3) {
+          const earlyMessageId = `msg-${Math.max(0, turnNumber - 3)}`;
+          if (!directReplies.has(earlyMessageId) && earlyMessageId !== `msg-${turnNumber - 1}`) {
+            conversationEdges.push({
+              id: `context-${turnNumber}`,
+              source: earlyMessageId,
+              target: `msg-${turnNumber}`,
+              type: 'smoothstep',
+              animated: false,
+              style: {
+                stroke: myColor,
+                strokeWidth: 1,
+                strokeDasharray: '2,8', // Dotted for context
+                opacity: 0.2
+              },
+              markerEnd: {
+                type: MarkerType.ArrowClosed,
+                color: myColor,
+                width: 10,
+                height: 10
+              }
+            });
+          }
+        }
+
+        setEdges(prev => [...prev, ...conversationEdges]);
 
         // Get annotations from the other 2 AIs
         const otherAIs = TURN_ORDER.filter(ai => ai !== modelKey);
@@ -508,52 +603,7 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
           )
         );
 
-        // Detect if this AI references other AIs and create cross-edges
-        const references = detectAIReferences(data.message);
-        const crossEdges = [];
-
-        references.forEach(refName => {
-          // Find the most recent message from the referenced AI
-          const referencedAIKey =
-            refName.toLowerCase().includes('llama') ? 'llama' :
-            refName.toLowerCase().includes('gemini') ? 'gemini' :
-            refName.toLowerCase().includes('openrouter') || refName.toLowerCase().includes('gpt') ? 'openrouter' : null;
-
-          if (referencedAIKey && referencedAIKey !== modelKey) {
-            // Find most recent message node from that AI
-            for (let i = turnNumber - 1; i >= 0; i--) {
-              const prevModelKey = TURN_ORDER[i % 3];
-              if (prevModelKey === referencedAIKey) {
-                // Create cross-reference edge
-                crossEdges.push({
-                  id: `cross-${turnNumber}-${i}`,
-                  source: `msg-${i}`,
-                  target: `msg-${turnNumber}`,
-                  type: 'smoothstep',
-                  animated: true,
-                  style: {
-                    stroke: modelKey === 'llama' ? '#06D6A0' : modelKey === 'openrouter' ? '#3A86FF' : '#C77DFF',
-                    strokeWidth: 1.5,
-                    strokeDasharray: '5,5',
-                    opacity: 0.5
-                  },
-                  markerEnd: {
-                    type: MarkerType.ArrowClosed,
-                    color: modelKey === 'llama' ? '#06D6A0' : modelKey === 'openrouter' ? '#3A86FF' : '#C77DFF',
-                    width: 15,
-                    height: 15
-                  }
-                });
-                break;
-              }
-            }
-          }
-        });
-
-        if (crossEdges.length > 0) {
-          setEdges(prev => [...prev, ...crossEdges]);
-        }
-
+        // Continue to next turn
         setTimeout(() => conductAITurn(turnNumber + 1), 2000);
       } else {
         console.error('Turn error:', data.error);
