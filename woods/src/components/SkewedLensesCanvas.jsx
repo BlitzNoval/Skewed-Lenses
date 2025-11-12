@@ -568,11 +568,13 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
         setEdges(prev => [...prev, ...conversationEdges]);
 
         // Get annotations from the other 2 AIs
+        console.log(`🔍 Getting AI-to-AI annotations for Turn ${turnNumber} (${modelKey})`);
         const otherAIs = TURN_ORDER.filter(ai => ai !== modelKey);
         const annotations = [];
 
         for (const reviewerAI of otherAIs) {
           try {
+            console.log(`   → ${reviewerAI} is reviewing ${modelKey}'s text...`);
             const annotationRes = await fetch('/api/annotate-bias', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -583,16 +585,23 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
             });
 
             const annotationData = await annotationRes.json();
+            console.log(`   ← ${reviewerAI} response:`, annotationData);
+
             if (annotationData.success && annotationData.annotations) {
               // Add model info to each annotation
               annotationData.annotations.forEach(ann => {
                 annotations.push({ ...ann, model: reviewerAI });
               });
+              console.log(`   ✓ ${reviewerAI} found ${annotationData.annotations.length} biased phrases`);
+            } else {
+              console.log(`   ✗ ${reviewerAI} returned no annotations`);
             }
           } catch (err) {
-            console.error(`Failed to get annotations from ${reviewerAI}:`, err);
+            console.error(`   ✗ Failed to get annotations from ${reviewerAI}:`, err);
           }
         }
+
+        console.log(`📊 Total annotations for Turn ${turnNumber}:`, annotations.length, annotations);
 
         // Update the message node with annotations
         setNodes(prev =>

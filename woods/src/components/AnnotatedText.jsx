@@ -14,9 +14,18 @@ const AI_COLORS = {
 };
 
 const AnnotatedText = ({ text, annotations = [] }) => {
+  console.log('📝 AnnotatedText rendering:', {
+    textLength: text?.length,
+    annotationsCount: annotations?.length,
+    annotations: annotations
+  });
+
   if (!annotations || annotations.length === 0) {
+    console.log('   → No annotations, showing plain text');
     return <div className="annotated-text-plain">{text}</div>;
   }
+
+  console.log('   → Rendering with', annotations.length, 'AI-marked biases');
 
   // Group overlapping annotations
   const segments = buildSegments(text, annotations);
