@@ -42,12 +42,17 @@ const AnnotatedText = ({ text, annotations = [] }) => {
         const models = segment.annotations.map(a => a.model);
         const uniqueModels = [...new Set(models)];
 
+        // Build rich tooltip with reasons
+        const tooltipText = segment.annotations.map(ann =>
+          `${AI_COLORS[ann.model].name}: ${ann.reason || 'Marked as biased'}`
+        ).join('\n');
+
         return (
           <span
             key={index}
             className="annotated-segment"
             data-models={uniqueModels.join(',')}
-            title={`Marked as biased by: ${uniqueModels.map(m => AI_COLORS[m].name).join(', ')}`}
+            title={tooltipText}
             style={{
               position: 'relative',
               background: blendColors(uniqueModels),

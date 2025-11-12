@@ -11,6 +11,8 @@ import 'reactflow/dist/style.css';
 import './SkewedLensesCanvas.css';
 import StartNode from './StartNode';
 import AnnotatedText from './AnnotatedText';
+import BiasSummaryCard from './BiasSummaryCard';
+import DynamicBiasKey from './DynamicBiasKey';
 import { detectAIReferences } from '../utils/biasHighlighter';
 
 // Lens color palette
@@ -104,7 +106,7 @@ function parseAnalysisText(text) {
 }
 
 // Rendered Analysis Component
-function RenderedAnalysis({ text, lensColor, isTyping, annotations }) {
+function RenderedAnalysis({ text, lensColor, isTyping, annotations, aiModel }) {
   if (isTyping) {
     return (
       <div className="analysis-raw">
@@ -118,6 +120,10 @@ function RenderedAnalysis({ text, lensColor, isTyping, annotations }) {
   return (
     <div className="analysis-rendered">
       <AnnotatedText text={text} annotations={annotations || []} />
+      {/* Show how other AIs interpreted this AI's reasoning */}
+      {annotations && annotations.length > 0 && (
+        <BiasSummaryCard aiModel={aiModel} annotations={annotations} />
+      )}
     </div>
   );
 }
@@ -235,6 +241,7 @@ function AnalysisNode({ data }) {
                 lensColor={lensColor}
                 isTyping={data.isTyping}
                 annotations={data.annotations}
+                aiModel={data.aiModel}
               />
             ) : (
               data.status === 'generating' ? '' : 'No analysis yet...'
@@ -875,6 +882,17 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
     [setEdges]
   );
 
+  // Collect all annotations from all message nodes for DynamicBiasKey
+  const allAnnotations = useMemo(() => {
+    const annotations = [];
+    nodes.forEach(node => {
+      if (node.data.annotations && Array.isArray(node.data.annotations)) {
+        annotations.push(...node.data.annotations);
+      }
+    });
+    return annotations;
+  }, [nodes]);
+
   return (
     <div className="skewed-canvas-container">
       {/* Top Bar - Back Button Only */}
@@ -905,6 +923,9 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
           <div className="status-content">{statusMessage}</div>
         </div>
       )}
+
+      {/* Dynamic Bias Key - Bottom Right */}
+      <DynamicBiasKey allAnnotations={allAnnotations} />
     </div>
   );
 }

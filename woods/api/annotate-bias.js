@@ -4,29 +4,37 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY
 });
 
-// AI annotation prompt - reviews another AI's text for bias markers
+// AI annotation prompt - reviews another AI's text for bias markers WITH EXPLANATIONS
 const ANNOTATION_PROMPT = `You are reviewing an analysis from another AI model.
 
-Your task: Identify phrases that show linguistic bias, assumptions, subjective wording, or reasoning patterns.
+Your task: Identify phrases that show linguistic bias, assumptions, subjective wording, or reasoning patterns, AND explain WHY each is biased.
 
-DO NOT rewrite or summarize the text.
-DO NOT add commentary.
-ONLY return the text with <mark> tags around biased phrases.
+Return a JSON array with this format:
+[
+  {
+    "phrase": "the exact text you're flagging",
+    "reason": "brief 1-sentence natural explanation of why this shows bias"
+  }
+]
 
-Types of bias to mark:
-- Certainty language ("definitely", "clearly", "obviously")
-- Hedging/uncertainty ("might", "perhaps", "seems")
-- Cognitive attribution ("the student thinks/believes")
-- Quantitative reductionism (over-reliance on numbers)
-- Affective/evaluative language ("impressive", "concerning")
-
-Return ONLY the marked-up text with <mark>phrase</mark> around biased segments.
+Types of bias to identify:
+- Certainty language (overstates confidence)
+- Hedging (understates conclusions)
+- Cognitive attribution (assumes student's mental state)
+- Quantitative reductionism (reduces complexity to numbers)
+- Affective language (imposes emotional judgment)
 
 Example input:
 "The student clearly has impressive fluency but shows 71% skip rate."
 
 Example output:
-"The student <mark>clearly</mark> has <mark>impressive</mark> fluency but shows <mark>71% skip rate</mark>."`;
+[
+  {"phrase": "clearly", "reason": "Assumes certainty where data only suggests probability"},
+  {"phrase": "impressive", "reason": "Imposes subjective evaluation rather than describing patterns"},
+  {"phrase": "71% skip rate", "reason": "Reduces reading behavior to a single metric without context"}
+]
+
+Return ONLY valid JSON. No markdown, no extra text.`;
 
 // Call Groq API (Llama)
 async function callGroq(text) {
@@ -104,23 +112,35 @@ async function callGemini(text) {
   return data.candidates[0].content.parts[0].text;
 }
 
-// Parse marked text into highlight annotations
-function parseAnnotations(markedText, originalText) {
+// Parse JSON response into annotations with explanations
+function parseAnnotations(jsonResponse, originalText) {
   const annotations = [];
-  const markRegex = /<mark>(.*?)<\/mark>/g;
-  let match;
 
-  while ((match = markRegex.exec(markedText)) !== null) {
-    const markedPhrase = match[1];
-    const startIndex = originalText.indexOf(markedPhrase);
+  try {
+    // Clean response - remove markdown code blocks if present
+    let cleanJson = jsonResponse.trim();
+    cleanJson = cleanJson.replace(/```json\n?/g, '').replace(/```\n?/g, '');
 
-    if (startIndex !== -1) {
-      annotations.push({
-        start: startIndex,
-        end: startIndex + markedPhrase.length,
-        text: markedPhrase
+    const parsed = JSON.parse(cleanJson);
+
+    if (Array.isArray(parsed)) {
+      parsed.forEach(item => {
+        const phrase = item.phrase;
+        const reason = item.reason;
+        const startIndex = originalText.indexOf(phrase);
+
+        if (startIndex !== -1) {
+          annotations.push({
+            start: startIndex,
+            end: startIndex + phrase.length,
+            text: phrase,
+            reason: reason // WHY this is biased
+          });
+        }
       });
     }
+  } catch (error) {
+    console.error('Failed to parse annotation JSON:', error, jsonResponse);
   }
 
   return annotations;
