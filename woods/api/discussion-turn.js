@@ -66,7 +66,7 @@ async function callOpenRouter(messages) {
         'X-Title': 'Skewed Lenses AI Discussion'
       },
       body: JSON.stringify({
-        model: 'openai/gpt-4o-mini:free',
+        model: 'openai/gpt-oss-20b:free',
         messages,
         temperature: 0.7,
         max_tokens: 150
