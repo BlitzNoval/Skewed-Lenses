@@ -5,13 +5,15 @@ import AnnotatedText from './AnnotatedText';
 const AI_MODELS = {
   llama: {
     name: 'Llama',
-    color: '#06D6A0',
-    icon: '🦙'
+    label: 'LLAMA — 1ST INTERPRETATION',
+    color: '#0DD7A3',
+    borderOpacity: '0.3'
   },
   gemini: {
     name: 'Gemini',
-    color: '#C77DFF',
-    icon: '✨'
+    label: 'GEMINI — RESPONSE',
+    color: '#B48CFF',
+    borderOpacity: '0.3'
   }
 };
 
@@ -20,6 +22,8 @@ function ChatInterface({ benchmarkData, onClose }) {
   const [isTyping, setIsTyping] = useState(false);
   const [showHighlights, setShowHighlights] = useState(true);
   const [conversationComplete, setConversationComplete] = useState(false);
+  const [biasVotes, setBiasVotes] = useState({}); // Track user votes on bias flags
+  const [stats, setStats] = useState({ llamaFlags: 0, geminiFlags: 0 });
   const messagesEndRef = useRef(null);
   const conversationHistoryRef = useRef([]);
 
@@ -39,11 +43,24 @@ function ChatInterface({ benchmarkData, onClose }) {
     }
   }, []);
 
+  // Calculate stats when messages update
+  useEffect(() => {
+    const llamaFlags = messages
+      .filter(m => m.annotations && m.annotations.some(a => a.model === 'llama'))
+      .reduce((sum, m) => sum + m.annotations.filter(a => a.model === 'llama').length, 0);
+
+    const geminiFlags = messages
+      .filter(m => m.annotations && m.annotations.some(a => a.model === 'gemini'))
+      .reduce((sum, m) => sum + m.annotations.filter(a => a.model === 'gemini').length, 0);
+
+    setStats({ llamaFlags, geminiFlags });
+  }, [messages]);
+
   const startConversation = () => {
-    // Add system message with benchmark data
+    // Add system message with framing statement
     const systemMessage = {
       type: 'system',
-      content: formatBenchmarkData(benchmarkData),
+      content: 'Two AI models interpret the same benchmark differently. Their conversation below exposes how language itself shapes what AI believes is true.',
       timestamp: new Date().toISOString()
     };
 
@@ -56,7 +73,7 @@ function ChatInterface({ benchmarkData, onClose }) {
   };
 
   const formatBenchmarkData = (data) => {
-    return `📊 Benchmark Results:
+    return `📊 BENCHMARK RESULTS:
 • Fluency: ${data.benchmark1?.fluencyScore?.percentage || 0}%
 • Skip Rate: ${data.benchmark2?.skipRate || 0}%
 • Words Per Minute: ${data.benchmark2?.wordsPerMinute || 0}
@@ -65,8 +82,9 @@ function ChatInterface({ benchmarkData, onClose }) {
 
   const conductTurn = async (modelKey, turnNumber) => {
     if (turnNumber >= 8) {
-      // Stop after 8 turns (4 each)
+      // Stop after 8 turns and show reflection
       setConversationComplete(true);
+      addReflectionMessage();
       return;
     }
 
@@ -99,7 +117,7 @@ function ChatInterface({ benchmarkData, onClose }) {
         const otherAI = modelKey === 'llama' ? 'gemini' : 'llama';
         const annotations = await getAnnotations(otherAI, data.message);
 
-        // Type out the message gradually
+        // Type out the message with fade-up animation
         await typeMessage(modelKey, data.message, annotations, turnNumber);
 
         setIsTyping(false);
@@ -144,84 +162,110 @@ function ChatInterface({ benchmarkData, onClose }) {
         id: `msg-${turnNumber}`,
         type: 'ai',
         aiModel: modelKey,
-        content: '',
+        content: text, // Show full content immediately with fade-up
         fullContent: text,
         annotations,
-        isTyping: true,
+        isTyping: false,
         timestamp: new Date().toISOString()
       };
 
       setMessages(prev => [...prev, message]);
-
-      // Type gradually
-      let charIndex = 0;
-      const typeInterval = setInterval(() => {
-        charIndex += 2; // Type 2 characters at a time
-
-        if (charIndex >= text.length) {
-          clearInterval(typeInterval);
-          setMessages(prev =>
-            prev.map(msg =>
-              msg.id === message.id
-                ? { ...msg, content: text, isTyping: false }
-                : msg
-            )
-          );
-          resolve();
-        } else {
-          setMessages(prev =>
-            prev.map(msg =>
-              msg.id === message.id
-                ? { ...msg, content: text.slice(0, charIndex) }
-                : msg
-            )
-          );
-        }
-      }, 30);
+      resolve();
     });
+  };
+
+  const addReflectionMessage = () => {
+    const reflection = {
+      type: 'reflection',
+      content: `Both models analyzed the same student benchmark but diverged in tone and reasoning.
+
+Llama framed uncertainty as a lack of data.
+
+Gemini framed uncertainty as cognitive nuance.
+
+These linguistic differences reveal how AI bias lives not in code, but in interpretation.`,
+      timestamp: new Date().toISOString()
+    };
+
+    setTimeout(() => {
+      setMessages(prev => [...prev, reflection]);
+    }, 500);
+  };
+
+  const handleBiasVote = (messageId, annotationIndex, vote) => {
+    const voteKey = `${messageId}-${annotationIndex}`;
+    setBiasVotes(prev => ({
+      ...prev,
+      [voteKey]: vote
+    }));
+  };
+
+  const getVotePercentage = (messageId, annotationIndex) => {
+    // Simulate consensus - in real app would fetch from backend
+    return Math.floor(Math.random() * 40) + 50; // 50-90%
   };
 
   const restartConversation = () => {
     setMessages([]);
     conversationHistoryRef.current = [];
     setConversationComplete(false);
+    setBiasVotes({});
+    setStats({ llamaFlags: 0, geminiFlags: 0 });
     startConversation();
   };
 
   return (
-    <div className="chat-interface">
-      {/* Header */}
-      <div className="chat-header">
-        <div className="header-left">
-          <button className="back-btn" onClick={onClose}>
-            ← Back
+    <div className="academic-interface">
+      {/* Interpretive Header */}
+      <div className="interface-header">
+        <div className="header-top">
+          <button className="minimal-back-btn" onClick={onClose}>
+            ← BACK
           </button>
-          <h2>Skewed Lenses</h2>
-        </div>
-        <div className="header-controls">
-          <button
-            className={`toggle-btn ${showHighlights ? 'active' : ''}`}
-            onClick={() => setShowHighlights(!showHighlights)}
-          >
-            {showHighlights ? '👁 Hide Highlights' : '👁 Show Highlights'}
-          </button>
-          {conversationComplete && (
-            <button className="restart-btn" onClick={restartConversation}>
-              🔄 Restart
+          <div className="header-title">SKEWED LENSES</div>
+          <div className="header-controls">
+            <button
+              className={`minimal-toggle ${showHighlights ? 'active' : ''}`}
+              onClick={() => setShowHighlights(!showHighlights)}
+            >
+              {showHighlights ? 'HIDE HIGHLIGHTS' : 'SHOW HIGHLIGHTS'}
             </button>
-          )}
+            {conversationComplete && (
+              <button className="minimal-restart" onClick={restartConversation}>
+                RESTART
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Progressive Stats */}
+        {stats.llamaFlags > 0 || stats.geminiFlags > 0 ? (
+          <div className="stats-panel">
+            <span className="stat-item">Llama Bias Flags: {stats.llamaFlags}</span>
+            <span className="stat-divider">|</span>
+            <span className="stat-item">Gemini Bias Flags: {stats.geminiFlags}</span>
+          </div>
+        ) : null}
       </div>
 
-      {/* Messages */}
-      <div className="chat-messages">
+      {/* Dialogue Stream */}
+      <div className="dialogue-stream">
         {messages.map((msg, index) => {
           if (msg.type === 'system') {
             return (
-              <div key={index} className="message system-message">
-                <div className="message-content">
-                  {msg.content.split('\n').map((line, i) => (
-                    <div key={i}>{line}</div>
+              <div key={index} className="framing-statement">
+                {msg.content}
+              </div>
+            );
+          }
+
+          if (msg.type === 'reflection') {
+            return (
+              <div key={index} className="reflection-panel">
+                <div className="reflection-label">SYSTEM SUMMARY</div>
+                <div className="reflection-content">
+                  {msg.content.split('\n\n').map((para, i) => (
+                    <p key={i}>{para}</p>
                   ))}
                 </div>
               </div>
@@ -229,66 +273,70 @@ function ChatInterface({ benchmarkData, onClose }) {
           }
 
           const aiConfig = AI_MODELS[msg.aiModel];
-          const isLlama = msg.aiModel === 'llama';
+          const turnLabel = index === 1 ? aiConfig.label : aiConfig.label.replace('1ST INTERPRETATION', 'RESPONSE');
 
           return (
-            <div
-              key={msg.id}
-              className={`message ai-message ${msg.aiModel}-message`}
-            >
-              <div className="message-avatar" style={{ background: aiConfig.color }}>
-                {aiConfig.icon}
+            <div key={msg.id} className="dialogue-card">
+              <div className="card-label" style={{ color: `${aiConfig.color}66` }}>
+                {turnLabel}
               </div>
-              <div className="message-bubble" style={{ borderColor: aiConfig.color }}>
-                <div className="message-header">
-                  <span className="ai-name">{aiConfig.name}</span>
-                </div>
-                <div className="message-content">
-                  {msg.isTyping ? (
-                    <span>{msg.content}<span className="typing-cursor">|</span></span>
-                  ) : (
-                    <>
-                      {showHighlights && msg.annotations && msg.annotations.length > 0 ? (
-                        <AnnotatedText text={msg.content} annotations={msg.annotations} />
-                      ) : (
-                        <span>{msg.content}</span>
-                      )}
-                    </>
-                  )}
-                </div>
-                {!msg.isTyping && showHighlights && msg.annotations && msg.annotations.length > 0 && (
-                  <div className="bias-notice">
-                    <span className="bias-icon">🔍</span>
-                    {msg.annotations.length} phrase{msg.annotations.length !== 1 ? 's' : ''} flagged by{' '}
-                    {AI_MODELS[msg.annotations[0].model].name}
-                  </div>
+              <div
+                className="card-content"
+                style={{
+                  borderColor: `${aiConfig.color}${Math.round(parseFloat(aiConfig.borderOpacity) * 255).toString(16).padStart(2, '0')}`
+                }}
+              >
+                {showHighlights && msg.annotations && msg.annotations.length > 0 ? (
+                  <AnnotatedText text={msg.content} annotations={msg.annotations} />
+                ) : (
+                  <p>{msg.content}</p>
                 )}
               </div>
+
+              {/* Voting Mechanic */}
+              {!msg.isTyping && showHighlights && msg.annotations && msg.annotations.length > 0 && (
+                <div className="bias-validation">
+                  {msg.annotations.slice(0, 3).map((ann, annIndex) => {
+                    const voteKey = `${msg.id}-${annIndex}`;
+                    const userVote = biasVotes[voteKey];
+
+                    return (
+                      <div key={annIndex} className="validation-item">
+                        <div className="validation-phrase">
+                          "{ann.text}" — {ann.reason}
+                        </div>
+                        {!userVote ? (
+                          <div className="validation-prompt">
+                            <span className="prompt-text">Is this bias flag valid?</span>
+                            <button
+                              className="vote-btn valid"
+                              onClick={() => handleBiasVote(msg.id, annIndex, 'valid')}
+                            >
+                              ✓ VALID
+                            </button>
+                            <button
+                              className="vote-btn invalid"
+                              onClick={() => handleBiasVote(msg.id, annIndex, 'invalid')}
+                            >
+                              ✗ NOT VALID
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="validation-result">
+                            You voted: {userVote === 'valid' ? 'Valid' : 'Not Valid'} ({getVotePercentage(msg.id, annIndex)}% agree)
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })}
 
-        {isTyping && (
-          <div className="typing-indicator">
-            <div className="typing-dots">
-              <span></span>
-              <span></span>
-              <span></span>
-            </div>
-          </div>
-        )}
-
         <div ref={messagesEndRef} />
       </div>
-
-      {/* Footer */}
-      {conversationComplete && (
-        <div className="chat-footer">
-          <div className="completion-message">
-            ✓ Discussion complete. Two perspectives on your reading results.
-          </div>
-        </div>
-      )}
     </div>
   );
 }
