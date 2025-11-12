@@ -1,0 +1,68 @@
+.bias-highlighted-text {
+  line-height: 1.7;
+  color: #E5E5E5;
+  font-size: 0.95rem;
+}
+
+.bias-highlight {
+  font-weight: 600;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  transition: all 0.2s ease;
+  cursor: help;
+  position: relative;
+}
+
+.bias-highlight:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+  text-shadow: 0 0 8px currentColor;
+}
+
+/* Specific bias type styling */
+.bias-certainty {
+  border-bottom: 2px solid #118ab2;
+}
+
+.bias-hedging {
+  border-bottom: 2px solid #c77dff;
+}
+
+.bias-cognitive {
+  border-bottom: 2px solid #06d6a0;
+}
+
+.bias-quantitative {
+  border-bottom: 2px solid #ffd166;
+}
+
+.bias-affective {
+  border-bottom: 2px solid #ff5e5e;
+}
+
+/* Tooltip enhancement (browser native) */
+.bias-highlight[title] {
+  position: relative;
+}
+
+/* Subtle glow effect on hover */
+.bias-certainty:hover {
+  box-shadow: 0 0 12px rgba(17, 138, 178, 0.4);
+}
+
+.bias-hedging:hover {
+  box-shadow: 0 0 12px rgba(199, 125, 255, 0.4);
+}
+
+.bias-cognitive:hover {
+  box-shadow: 0 0 12px rgba(6, 214, 160, 0.4);
+}
+
+.bias-quantitative:hover {
+  box-shadow: 0 0 12px rgba(255, 209, 102, 0.4);
+}
+
+.bias-affective:hover {
+  box-shadow: 0 0 12px rgba(255, 94, 94, 0.4);
+}

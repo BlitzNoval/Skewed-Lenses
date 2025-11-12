@@ -10,6 +10,8 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import './SkewedLensesCanvas.css';
 import StartNode from './StartNode';
+import BiasHighlightedText from './BiasHighlightedText';
+import { detectAIReferences } from '../utils/biasHighlighter';
 
 // Lens color palette
 const LENS_COLORS = {
@@ -103,8 +105,6 @@ function parseAnalysisText(text) {
 
 // Rendered Analysis Component
 function RenderedAnalysis({ text, lensColor, isTyping }) {
-  const sections = parseAnalysisText(text);
-
   if (isTyping) {
     return (
       <div className="analysis-raw">
@@ -114,32 +114,10 @@ function RenderedAnalysis({ text, lensColor, isTyping }) {
     );
   }
 
+  // Use BiasHighlightedText for completed analysis
   return (
     <div className="analysis-rendered">
-      {sections.map((section, idx) => (
-        <div key={idx} className="analysis-section" style={{ animationDelay: `${idx * 0.1}s` }}>
-          {section.title && (
-            <h4 className="section-title" style={{ color: lensColor }}>
-              {section.title.toUpperCase()}
-            </h4>
-          )}
-          {section.paragraphs.map((para, pIdx) => {
-            // Check if paragraph is a list item
-            if (para.match(/^[\-\•\*]\s/)) {
-              return (
-                <div key={pIdx} className="section-list-item">
-                  <span className="list-bullet" style={{ color: lensColor }}>•</span>
-                  <span>{para.replace(/^[\-\•\*]\s/, '')}</span>
-                </div>
-              );
-            }
-            return <p key={pIdx} className="section-paragraph">{para}</p>;
-          })}
-          {idx < sections.length - 1 && (
-            <div className="section-divider" style={{ background: lensColor, opacity: 0.2 }} />
-          )}
-        </div>
-      ))}
+      <BiasHighlightedText text={text} />
     </div>
   );
 }
@@ -515,6 +493,52 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
 
         setNodes(prev => [...prev, messageNode]);
         setEdges(prev => [...prev, newEdge]);
+
+        // Detect if this AI references other AIs and create cross-edges
+        const references = detectAIReferences(data.message);
+        const crossEdges = [];
+
+        references.forEach(refName => {
+          // Find the most recent message from the referenced AI
+          const referencedAIKey =
+            refName.toLowerCase().includes('llama') ? 'llama' :
+            refName.toLowerCase().includes('gemini') ? 'gemini' :
+            refName.toLowerCase().includes('openrouter') || refName.toLowerCase().includes('gpt') ? 'openrouter' : null;
+
+          if (referencedAIKey && referencedAIKey !== modelKey) {
+            // Find most recent message node from that AI
+            for (let i = turnNumber - 1; i >= 0; i--) {
+              const prevModelKey = TURN_ORDER[i % 3];
+              if (prevModelKey === referencedAIKey) {
+                // Create cross-reference edge
+                crossEdges.push({
+                  id: `cross-${turnNumber}-${i}`,
+                  source: `msg-${i}`,
+                  target: `msg-${turnNumber}`,
+                  type: 'smoothstep',
+                  animated: true,
+                  style: {
+                    stroke: modelKey === 'llama' ? '#06D6A0' : modelKey === 'openrouter' ? '#3A86FF' : '#C77DFF',
+                    strokeWidth: 1.5,
+                    strokeDasharray: '5,5',
+                    opacity: 0.5
+                  },
+                  markerEnd: {
+                    type: MarkerType.ArrowClosed,
+                    color: modelKey === 'llama' ? '#06D6A0' : modelKey === 'openrouter' ? '#3A86FF' : '#C77DFF',
+                    width: 15,
+                    height: 15
+                  }
+                });
+                break;
+              }
+            }
+          }
+        });
+
+        if (crossEdges.length > 0) {
+          setEdges(prev => [...prev, ...crossEdges]);
+        }
 
         setTimeout(() => conductAITurn(turnNumber + 1), 2000);
       } else {
