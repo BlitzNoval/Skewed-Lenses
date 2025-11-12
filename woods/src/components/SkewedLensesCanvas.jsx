@@ -240,30 +240,7 @@ function AnalysisNode({ data }) {
             )}
           </div>
 
-          {data.status === 'complete' && !data.isTyping && !showAISelector && !showLensSelector && (
-            <div className="branch-buttons-container">
-              <button
-                className="branch-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleNewAIClick();
-                }}
-                title="Add New AI"
-              >
-                <span className="branch-icon">+</span> New AI
-              </button>
-              <button
-                className="branch-btn"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleNewLensClick();
-                }}
-                title="Change Lens"
-              >
-                <span className="branch-icon">+</span> New Lens
-              </button>
-            </div>
-          )}
+          {/* Branch buttons removed for discussion mode */}
 
           {/* AI Selector Strip */}
           {showAISelector && (
@@ -556,6 +533,22 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
     setDiscussionComplete(true);
     setCurrentSpeaker(null);
     setStatusMessage('Discussion complete. The AIs showed differing perspectives on your results.');
+
+    // Update all anchor nodes to completed state
+    setNodes(prevNodes =>
+      prevNodes.map(node => {
+        if (node.id.startsWith('anchor-')) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              status: 'complete'
+            }
+          };
+        }
+        return node;
+      })
+    );
   };
 
   const createFirstAnalysis = (aiKey, lensKey) => {
@@ -793,9 +786,6 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
         <button className="close-btn" onClick={onClose}>
           <span>←</span> Back
         </button>
-        {statusMessage && (
-          <div className="status-message">{statusMessage}</div>
-        )}
       </div>
 
       {/* React Flow Canvas */}
@@ -812,6 +802,13 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
         <Background color="#FFFFFF" gap={40} size={1} style={{ opacity: 0.03 }} />
         <Controls />
       </ReactFlow>
+
+      {/* Bottom Status Bar */}
+      {statusMessage && (
+        <div className="discussion-status-bar">
+          <div className="status-content">{statusMessage}</div>
+        </div>
+      )}
     </div>
   );
 }
