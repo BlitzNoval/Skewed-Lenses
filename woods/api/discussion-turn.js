@@ -54,31 +54,44 @@ async function callGroq(messages) {
   return response.choices[0].message.content;
 }
 
-// Call OpenRouter API (GPT-4 alternative)
+// Call OpenRouter API
 async function callOpenRouter(messages) {
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': process.env.VERCEL_URL || 'http://localhost:5173',
-      'X-Title': 'Skewed Lenses AI Discussion'
-    },
-    body: JSON.stringify({
-      model: 'openai/gpt-oss-20b:free',
-      messages,
-      temperature: 0.7,
-      max_tokens: 150
-    })
-  });
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': process.env.VERCEL_URL || 'http://localhost:5173',
+        'X-Title': 'Skewed Lenses AI Discussion'
+      },
+      body: JSON.stringify({
+        model: 'openai/gpt-4o-mini:free',
+        messages,
+        temperature: 0.7,
+        max_tokens: 150
+      })
+    });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`OpenRouter API error: ${errorText}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('OpenRouter error response:', errorText);
+      throw new Error(`OpenRouter API error (${response.status}): ${errorText}`);
+    }
+
+    const data = await response.json();
+
+    // Validate response structure
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error('Invalid OpenRouter response:', JSON.stringify(data));
+      throw new Error('Invalid response structure from OpenRouter');
+    }
+
+    return data.choices[0].message.content;
+  } catch (error) {
+    console.error('OpenRouter call failed:', error);
+    throw error;
   }
-
-  const data = await response.json();
-  return data.choices[0].message.content;
 }
 
 // Call Google Gemini API

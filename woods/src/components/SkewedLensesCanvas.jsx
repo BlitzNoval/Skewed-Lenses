@@ -10,7 +10,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import './SkewedLensesCanvas.css';
 import StartNode from './StartNode';
-import BiasHighlightedText from './BiasHighlightedText';
+import AnnotatedText from './AnnotatedText';
 import { detectAIReferences } from '../utils/biasHighlighter';
 
 // Lens color palette
@@ -104,7 +104,7 @@ function parseAnalysisText(text) {
 }
 
 // Rendered Analysis Component
-function RenderedAnalysis({ text, lensColor, isTyping }) {
+function RenderedAnalysis({ text, lensColor, isTyping, annotations }) {
   if (isTyping) {
     return (
       <div className="analysis-raw">
@@ -114,10 +114,10 @@ function RenderedAnalysis({ text, lensColor, isTyping }) {
     );
   }
 
-  // Use BiasHighlightedText for completed analysis
+  // Use AnnotatedText with AI-to-AI annotations
   return (
     <div className="analysis-rendered">
-      <BiasHighlightedText text={text} />
+      <AnnotatedText text={text} annotations={annotations || []} />
     </div>
   );
 }
@@ -234,6 +234,7 @@ function AnalysisNode({ data }) {
                 text={data.analysis}
                 lensColor={lensColor}
                 isTyping={data.isTyping}
+                annotations={data.annotations}
               />
             ) : (
               data.status === 'generating' ? '' : 'No analysis yet...'
@@ -470,6 +471,42 @@ function SkewedLensesCanvas({ benchmarkData, onClose }) {
 
         setNodes(prev => [...prev, messageNode]);
         setEdges(prev => [...prev, newEdge]);
+
+        // Get annotations from the other 2 AIs
+        const otherAIs = TURN_ORDER.filter(ai => ai !== modelKey);
+        const annotations = [];
+
+        for (const reviewerAI of otherAIs) {
+          try {
+            const annotationRes = await fetch('/api/annotate-bias', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                reviewerModel: reviewerAI,
+                targetText: data.message
+              })
+            });
+
+            const annotationData = await annotationRes.json();
+            if (annotationData.success && annotationData.annotations) {
+              // Add model info to each annotation
+              annotationData.annotations.forEach(ann => {
+                annotations.push({ ...ann, model: reviewerAI });
+              });
+            }
+          } catch (err) {
+            console.error(`Failed to get annotations from ${reviewerAI}:`, err);
+          }
+        }
+
+        // Update the message node with annotations
+        setNodes(prev =>
+          prev.map(node =>
+            node.id === `msg-${turnNumber}`
+              ? { ...node, data: { ...node.data, annotations } }
+              : node
+          )
+        );
 
         // Detect if this AI references other AIs and create cross-edges
         const references = detectAIReferences(data.message);
