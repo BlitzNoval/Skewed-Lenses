@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import './App.css'
 import OneInTen from './components/Globe'
 import PlasmaBackground from './components/PlasmaBackground'
-import SkewedLensesCanvas from './components/SkewedLensesCanvas'
+import ChatInterface from './components/ChatInterface'
 import useSpeechStore from './store/useSpeechStore'
 import useSpeechRecognition from './hooks/useSpeechRecognition'
 
@@ -1127,9 +1127,9 @@ function App() {
         </div>
       )}
 
-      {/* Skewed Lenses - Railway-Style Canvas */}
+      {/* Skewed Lenses - Chat Interface */}
       {currentPage === 'skewed-lenses' && (
-        <SkewedLensesCanvas
+        <ChatInterface
           benchmarkData={{
             benchmark1: savedBenchmarkResults.benchmark1,
             benchmark2: savedBenchmarkResults.benchmark2

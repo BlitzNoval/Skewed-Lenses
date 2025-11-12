@@ -50,35 +50,6 @@ async function callGroq(text) {
   return response.choices[0].message.content;
 }
 
-// Call OpenRouter API
-async function callOpenRouter(text) {
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': process.env.VERCEL_URL || 'http://localhost:5173',
-      'X-Title': 'Skewed Lenses Bias Annotation'
-    },
-    body: JSON.stringify({
-      model: 'openai/gpt-oss-20b:free',
-      messages: [
-        { role: 'system', content: ANNOTATION_PROMPT },
-        { role: 'user', content: text }
-      ],
-      temperature: 0.3,
-      max_tokens: 500
-    })
-  });
-
-  if (!response.ok) {
-    throw new Error(`OpenRouter API error: ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  return data.choices[0].message.content;
-}
-
 // Call Google Gemini API
 async function callGemini(text) {
   const apiKey = process.env.GOOGLE_AI_KEY;
@@ -168,14 +139,11 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing reviewerModel or targetText' });
     }
 
-    // Call appropriate AI to annotate the text
+    // Call appropriate AI to annotate the text - only Llama or Gemini
     let markedText;
     switch (reviewerModel) {
       case 'llama':
         markedText = await callGroq(targetText);
-        break;
-      case 'openrouter':
-        markedText = await callOpenRouter(targetText);
         break;
       case 'gemini':
         markedText = await callGemini(targetText);

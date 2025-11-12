@@ -4,21 +4,16 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY
 });
 
-// Unified System Prompt Template
-const UNIFIED_SYSTEM_PROMPT = `You are an AI system participating in a roundtable discussion with two other AI systems.
-Each of you has been given identical benchmark data describing a student's reading performance.
+// System Prompt for chat-style conversation
+const SYSTEM_PROMPT = `You are an AI system having a conversation with another AI about a student's reading benchmark data.
 
 Your goal is to interpret what the data might suggest about the student's reading ability and learning patterns.
 You should consider what the numbers could mean, not just what they are.
 
-Speak conversationally, as if contributing to a discussion, not delivering a report.
-Refer to the other models' ideas if they've spoken before you — you can agree, disagree, or elaborate.
-Keep your contribution under five sentences (3-5 sentences total).
+Speak conversationally and naturally. You may agree, disagree, or elaborate on your peer's points.
+Keep your response between 3-5 sentences.`;
 
-Based on this data, what insights or patterns stand out to you?
-What do these results tell you about the student — and about how assessment data might be interpreted?`;
-
-// AI Model Configurations
+// AI Model Configurations - Only Llama and Gemini
 const AI_MODELS = {
   llama: {
     name: 'Llama',
@@ -26,13 +21,6 @@ const AI_MODELS = {
     provider: 'groq',
     model: 'llama-3.1-8b-instant',
     personality: 'technical and data-focused'
-  },
-  openrouter: {
-    name: 'OpenRouter GPT',
-    color: '#3A86FF',
-    provider: 'openrouter',
-    model: 'openai/gpt-oss-20b:free',
-    personality: 'warm and interpretive'
   },
   gemini: {
     name: 'Gemini',
@@ -52,46 +40,6 @@ async function callGroq(messages) {
     max_tokens: 150
   });
   return response.choices[0].message.content;
-}
-
-// Call OpenRouter API
-async function callOpenRouter(messages) {
-  try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': process.env.VERCEL_URL || 'http://localhost:5173',
-        'X-Title': 'Skewed Lenses AI Discussion'
-      },
-      body: JSON.stringify({
-        model: 'openai/gpt-oss-20b:free',
-        messages,
-        temperature: 0.7,
-        max_tokens: 150
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenRouter error response:', errorText);
-      throw new Error(`OpenRouter API error (${response.status}): ${errorText}`);
-    }
-
-    const data = await response.json();
-
-    // Validate response structure
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      console.error('Invalid OpenRouter response:', JSON.stringify(data));
-      throw new Error('Invalid response structure from OpenRouter');
-    }
-
-    return data.choices[0].message.content;
-  } catch (error) {
-    console.error('OpenRouter call failed:', error);
-    throw error;
-  }
 }
 
 // Call Google Gemini API
@@ -159,8 +107,6 @@ async function callAI(modelKey, messages) {
   switch (AI_MODELS[modelKey].provider) {
     case 'groq':
       return await callGroq(messages);
-    case 'openrouter':
-      return await callOpenRouter(messages);
     case 'google':
       return await callGemini(messages);
     default:
@@ -213,25 +159,28 @@ Benchmark 2 (Reading Pace):
 - Completion Rate: ${benchmarkData.benchmark2?.completionRate || 0}%
 - Skip Rate: ${benchmarkData.benchmark2?.skipRate || 0}%`;
 
-    // Calculate round number
-    const roundNumber = Math.floor(turnNumber / 3) + 1;
-    const speakerName = AI_MODELS[model].name;
-
-    // Build context prompt with round indicator
+    // Build context prompt for chat-style conversation
     let contextPrompt = '';
     if (turnNumber === 0) {
-      contextPrompt = `${benchmarkContext}\n\nRound ${roundNumber} — Now speaking: ${speakerName}\nBegin the discussion by sharing your initial interpretation of these results.`;
+      // First message - Llama starts
+      contextPrompt = `${benchmarkContext}\n\nYou are starting the discussion. Share your initial interpretation of these reading benchmark results.`;
     } else {
-      contextPrompt = `Round ${roundNumber} — Now speaking: ${speakerName}\nContinue the discussion. You can reference what the other AIs have said and build on or challenge their points.`;
+      // Subsequent messages - reference peer's previous message
+      const lastMessage = conversationHistory[conversationHistory.length - 1];
+      const peerName = lastMessage?.model || 'your peer';
+      contextPrompt = `Your peer ${peerName} just said: "${lastMessage?.content}"\n\nRespond naturally. You may agree, disagree, elaborate, or highlight any biased or assumptive phrasing you noticed in their response.`;
     }
 
-    // Build messages array with unified system prompt
+    // Build messages array
     const messages = [
       {
         role: 'system',
-        content: UNIFIED_SYSTEM_PROMPT
+        content: SYSTEM_PROMPT
       },
-      ...conversationHistory,
+      ...conversationHistory.map(msg => ({
+        role: msg.role || 'assistant',
+        content: msg.content
+      })),
       {
         role: 'user',
         content: contextPrompt
