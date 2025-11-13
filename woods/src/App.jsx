@@ -1529,6 +1529,18 @@ function App() {
                   </span>
                 </button>
               </div>
+
+              {/* Live Transcription */}
+              {(transcript || interimTranscript) && (
+                <div className="live-transcription">
+                  <span className="transcription-text">
+                    {transcript}
+                    {interimTranscript && (
+                      <span className="interim-text">{interimTranscript}</span>
+                    )}
+                  </span>
+                </div>
+              )}
             </div>
           )}
 
