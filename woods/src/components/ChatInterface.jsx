@@ -65,7 +65,7 @@ const saveVotesToStorage = (votes) => {
 };
 
 // Animated counter component
-function AnimatedCounter({ value, duration = 800 }) {
+function AnimatedCounter({ value, duration = 1400 }) {
   const [displayValue, setDisplayValue] = useState(0);
 
   useEffect(() => {
