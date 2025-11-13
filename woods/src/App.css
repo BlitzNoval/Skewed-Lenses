@@ -3791,65 +3791,81 @@
   transform: translateY(-2px);
 }
 
-/* About Section */
+/* About Section - Dark Theme */
 .about-section {
   min-height: 100vh;
   width: 100%;
-  background: #f8f8f8;
+  background: #0c0c0f;
   padding: 8rem 4rem;
   position: relative;
   z-index: 10;
 }
 
 .about-container {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
+  padding-left: 2rem;
 }
 
 .about-content {
   display: flex;
   flex-direction: column;
-  gap: 4rem;
+  gap: 3rem;
 }
 
 .about-item {
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(10px);
-  padding: 3rem;
-  border-radius: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
-}
-
-.about-item:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+  background: transparent;
+  padding: 0;
+  border: none;
+  text-align: left;
 }
 
 .about-item h3 {
   font-family: 'SF Pro Display', 'Helvetica Neue', 'Segoe UI', 'Arial', sans-serif;
-  font-size: 2.2rem;
+  font-size: 1.8rem;
   font-weight: 600;
-  color: #000000;
+  color: #eaeaea;
   margin-bottom: 1.5rem;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
+  text-align: left;
 }
 
 .about-item p {
   font-family: 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', 'Arial', sans-serif;
-  font-size: 1.3rem;
+  font-size: 1.25rem;
   line-height: 2.0;
-  color: #333333;
-  margin-bottom: 1rem;
+  color: #eaeaea;
+  margin-bottom: 1.2rem;
+  text-align: left;
+  max-width: 90%;
 }
 
 .about-item p:last-child {
   margin-bottom: 0;
 }
 
-.about-item em {
-  font-style: italic;
-  color: #000000;
+.about-item ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 1rem 0;
+}
+
+.about-item ul li {
+  font-family: 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', 'Arial', sans-serif;
+  font-size: 1.25rem;
+  line-height: 2.0;
+  color: #eaeaea;
+  margin-bottom: 0.5rem;
+  padding-left: 2rem;
+  position: relative;
+  text-align: left;
+}
+
+.about-item ul li:before {
+  content: "—";
+  position: absolute;
+  left: 0;
+  color: #666;
 }
 
 /* Responsive About Section */
@@ -3858,17 +3874,19 @@
     padding: 4rem 2rem;
   }
 
-  .about-item {
-    padding: 2rem;
+  .about-container {
+    padding-left: 1rem;
   }
 
   .about-item h3 {
-    font-size: 1.6rem;
+    font-size: 1.4rem;
   }
 
-  .about-item p {
+  .about-item p,
+  .about-item ul li {
     font-size: 1.1rem;
     line-height: 1.8;
+    max-width: 100%;
   }
 
   .about-text {

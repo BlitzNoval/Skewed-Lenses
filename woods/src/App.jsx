@@ -882,67 +882,134 @@ function App() {
       <div className="about-container">
         <div className="about-content">
           <div className="about-item">
-            <h3>🪞 Project Overview</h3>
+            <h3>🌑 1. What This Project Is</h3>
             <p>
-              Skewed Lenses is an interactive dialogue between two AI systems, Llama and Gemini.
-              Both are given the same reading benchmark data — drawn from a dyslexia screening task — and asked to interpret it.
-              Their conversation unfolds live, revealing how bias emerges not from data itself, but from the language used to explain it.
+              Skewed Lenses stages a conversation between two AI systems — Llama and Gemini — as they interpret the same dyslexia benchmark results.
+              Instead of producing answers, they reveal their assumptions.
+            </p>
+            <p>
+              Their dialogue is the point: it shows how AI "reasons," misreads, exaggerates, softens, or speculates based on the language patterns it was trained on.
+            </p>
+            <p>
+              This is deliberate.
+              You're not building a tool to assess students — you're building a space where AI exposes itself.
             </p>
           </div>
 
           <div className="about-item">
-            <h3>🧠 Concept & Research Context</h3>
+            <h3>🧭 2. Why It Exists (Real Context, Not Generic Stuff)</h3>
             <p>
-              Generative AI is increasingly integrated into educational technologies, including assessments related to reading fluency and learning differences such as dyslexia.
-              Although these systems are presented as neutral and objective, their outputs are shaped by invisible biases: linguistic tendencies, training data, cultural assumptions, and epistemic framings.
+              This project comes directly from the HOSGAI question:
+              How do we keep the tool a tool?
             </p>
             <p>
-              This project was created for <em>Holding Our Space in the Age of Generative AI (HOSGAI)</em> — a research brief exploring creative practice in an era shaped by machine reasoning.
-              It responds to the question: "How do we keep the tool a tool?"
+              We do it by refusing to let AI speak with authority, and instead forcing it to speak in front of us.
             </p>
             <p>
-              By exposing how AI constructs interpretations — not hiding them — the interface prevents the AI from becoming an unquestioned authority.
-              The project turns AI into both subject and speaker, exposing how generative systems produce meaning differently based on their training data, tone, and underlying worldview.
-              The dialogue becomes a window into epistemic bias — how AI defines, frames, and sometimes distorts human knowledge.
+              When two models explain the same data — not numerically, but through language — the difference in worldview becomes visible.
+              That difference is bias.
             </p>
             <p>
-              This project investigates how AI "decides" what is true, and how different models produce different interpretations from identical benchmark results.
+              This is not about dyslexia.
+              It's about:
             </p>
-          </div>
-
-          <div className="about-item">
-            <h3>💬 How It Works</h3>
+            <ul>
+              <li>how machines interpret human cognition</li>
+              <li>how interpretation becomes "truth"</li>
+              <li>how AI language frames ability and difficulty</li>
+              <li>how neutrality is performed, not real</li>
+            </ul>
             <p>
-              Each AI reads the same benchmark results and responds conversationally, not computationally.
-              The second AI can highlight biased or assumptive phrasing in the other's language, exposing interpretive tension.
-              The interface is deliberately minimal — the design focuses on tone, pacing, and the subtle differences in word choice that reveal bias.
-              Users can hover over highlights to read why a phrase was marked, and simply watch the dialogue unfold.
-            </p>
-          </div>
-
-          <div className="about-item">
-            <h3>⚖️ Ethical Reflection</h3>
-            <p>
-              Skewed Lenses does not attempt to diagnose or simulate dyslexia.
-              The benchmark data is illustrative, used to explore how AI systems interpret human cognition.
-              The project instead critiques how educational and diagnostic technologies risk reducing complex human conditions to algorithmic readings.
-              It asks: When machines speak about us, whose logic are they using?
+              This is how your project ties into HOSGAI:
+              You turned AI from a diagnostic instrument into something that must justify its thinking.
             </p>
           </div>
 
           <div className="about-item">
-            <h3>🪄 Credits & Acknowledgments</h3>
+            <h3>💭 3. What You Can See Here</h3>
             <p>
-              Concept, design, and development by Liam Moodley.
+              When Llama and Gemini talk, you will notice:
+            </p>
+            <ul>
+              <li>one leans toward certainty</li>
+              <li>one leans toward possibility</li>
+              <li>one frames data as measurable</li>
+              <li>one frames data as contextual</li>
+              <li>both project assumptions onto the student</li>
+            </ul>
+            <p>
+              These tendencies aren't mistakes — they're bias signatures.
             </p>
             <p>
-              Created for DIGA4002A: Holding Our Space in the Age of GAI, Wits University.
+              The highlighted phrases show where the other AI detects:
+            </p>
+            <ul>
+              <li>overconfidence</li>
+              <li>speculation</li>
+              <li>reductive reasoning</li>
+              <li>linguistic hedging</li>
+              <li>culturally coded assumptions</li>
+            </ul>
+            <p>
+              Bias appears not as a "score," but as the shape of the language itself.
+            </p>
+          </div>
+
+          <div className="about-item">
+            <h3>🎛️ 4. How It Works (Minimal + Human Version)</h3>
+            <ul>
+              <li>Both models receive the same benchmark summary.</li>
+              <li>Llama speaks first.</li>
+              <li>Gemini replies — sometimes building on it, sometimes challenging it.</li>
+              <li>Each model can flag the other's phrasing when it appears biased or assumptive.</li>
+              <li>You can hover to see why it was marked.</li>
+              <li>You watch their reasoning drift, diverge, intersect, and contradict.</li>
+            </ul>
+            <p>
+              No AI here is "correct."
+              The value lies in observing how they interpret, not what they conclude.
+            </p>
+          </div>
+
+          <div className="about-item">
+            <h3>⚠️ 5. What This Is Not</h3>
+            <p>
+              This is not a diagnostic tool.
+              It does not detect dyslexia.
+              It does not evaluate users.
+              It does not replace teachers, psychologists, or human interpretation.
             </p>
             <p>
-              Built with React, Vercel, and browser-integrated AI APIs (Gemini & Llama 3).
+              This is a critical demonstration of how AI constructs meaning — even in spaces where precision and care are essential.
+            </p>
+          </div>
+
+          <div className="about-item">
+            <h3>✍️ 6. The Real Question Behind the Project</h3>
+            <p>
+              "What happens when machines explain humans?"
             </p>
             <p>
-              Supervisor: Hanli Geyser.
+              More specifically:
+              What do their words reveal about the systems that produced them?
+            </p>
+            <p>
+              Everything you see on this page — the tone, the highlights, the disagreements — is a reminder that AI is not neutral.
+              It is a lens.
+              And every lens is skewed.
+            </p>
+          </div>
+
+          <div className="about-item">
+            <h3>🪪 7. Credits</h3>
+            <p>
+              Designed and built by Liam Moodley
+            </p>
+            <p>
+              Created for DIGA4002A: Holding Our Space in the Age of GAI
+            </p>
+            <p>
+              Supervision: Hanli Geyser
             </p>
           </div>
         </div>
