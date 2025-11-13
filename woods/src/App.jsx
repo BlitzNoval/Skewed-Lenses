@@ -37,10 +37,12 @@ function App() {
   const [audioLevel, setAudioLevel] = useState(0)
   const [noInputDetected, setNoInputDetected] = useState(false)
 
-  // Benchmark 2 specific states - Reading Pace
+  // Benchmark 2 specific states - Typing Assessment
   const [benchmark2Active, setBenchmark2Active] = useState(false)
   const [benchmark2Words, setBenchmark2Words] = useState([])
   const [benchmark2CurrentIndex, setBenchmark2CurrentIndex] = useState(0)
+  const [benchmark2CurrentCharIndex, setBenchmark2CurrentCharIndex] = useState(0)
+  const [benchmark2TypedWord, setBenchmark2TypedWord] = useState('')
   const [benchmark2WordStatuses, setBenchmark2WordStatuses] = useState([])
   const [benchmark2Started, setBenchmark2Started] = useState(false)
   const [benchmark2Completed, setBenchmark2Completed] = useState(false)
@@ -83,22 +85,50 @@ function App() {
     resetBenchmark
   } = useSpeechStore()
 
-  // Benchmark 2 helper functions - Space bar to move through words
-  const handleBenchmark2WordAction = (statusCode) => {
+  // Benchmark 2 typing handler - character by character
+  const handleBenchmark2Typing = (char) => {
+    if (!benchmark2Started || benchmark2Completed) return
     if (benchmark2CurrentIndex >= benchmark2Words.length) return
 
-    // Update word status
-    const newStatuses = [...benchmark2WordStatuses]
-    newStatuses[benchmark2CurrentIndex] = statusCode
-    setBenchmark2WordStatuses(newStatuses)
+    const currentWord = benchmark2Words[benchmark2CurrentIndex].toLowerCase()
+    const currentTyped = benchmark2TypedWord.toLowerCase()
 
-    // Move to next word
-    const nextIndex = benchmark2CurrentIndex + 1
-    setBenchmark2CurrentIndex(nextIndex)
+    // Handle backspace
+    if (char === 'Backspace') {
+      if (currentTyped.length > 0) {
+        setBenchmark2TypedWord(prev => prev.slice(0, -1))
+        setBenchmark2CurrentCharIndex(prev => Math.max(0, prev - 1))
+      }
+      return
+    }
 
-    // Check if we've reached the end
-    if (nextIndex >= benchmark2Words.length) {
-      completeBenchmark2()
+    // Handle space - move to next word
+    if (char === ' ') {
+      if (currentTyped.length > 0) {
+        // Check if typed word matches
+        const newStatuses = [...benchmark2WordStatuses]
+        newStatuses[benchmark2CurrentIndex] = currentTyped === currentWord ? 1 : 3
+        setBenchmark2WordStatuses(newStatuses)
+
+        // Move to next word
+        const nextIndex = benchmark2CurrentIndex + 1
+        setBenchmark2CurrentIndex(nextIndex)
+        setBenchmark2TypedWord('')
+        setBenchmark2CurrentCharIndex(0)
+
+        // Check if we've reached the end
+        if (nextIndex >= benchmark2Words.length) {
+          completeBenchmark2()
+        }
+      }
+      return
+    }
+
+    // Only handle letter keys
+    if (char.length === 1 && char.match(/[a-z]/i)) {
+      const newTyped = currentTyped + char.toLowerCase()
+      setBenchmark2TypedWord(prev => prev + char)
+      setBenchmark2CurrentCharIndex(prev => prev + 1)
     }
   }
 
@@ -224,6 +254,8 @@ function App() {
     setBenchmark2Words(words)
     setBenchmark2WordStatuses(new Array(words.length).fill(0)) // 0 = unread
     setBenchmark2CurrentIndex(0)
+    setBenchmark2CurrentCharIndex(0)
+    setBenchmark2TypedWord('')
     setBenchmark2Timer(120) // 2 minutes
     setBenchmark2Completed(false)
     setBenchmark2Results(null)
@@ -250,22 +282,20 @@ function App() {
     }
   }, [benchmark2Started, benchmark2Completed, benchmark2Timer])
 
-  // Keyboard event handler for Benchmark 2 - Space bar
+  // Keyboard event handler for Benchmark 2 - Typing
   useEffect(() => {
     const handleBenchmark2KeyPress = (event) => {
       if (!benchmark2Started || benchmark2Completed) return
 
-      if (event.code === 'Space') {
-        event.preventDefault()
-        handleBenchmark2WordAction(1) // Mark as read (green)
-      }
+      event.preventDefault()
+      handleBenchmark2Typing(event.key)
     }
 
     if (benchmark2Started && !benchmark2Completed && currentPage === 'benchmark2') {
       document.addEventListener('keydown', handleBenchmark2KeyPress)
       return () => document.removeEventListener('keydown', handleBenchmark2KeyPress)
     }
-  }, [benchmark2Started, benchmark2Completed, currentPage, benchmark2CurrentIndex])
+  }, [benchmark2Started, benchmark2Completed, currentPage, benchmark2CurrentIndex, benchmark2TypedWord])
 
   const handleBenchmark2RestartWithConfirm = () => {
     if (benchmark2Completed && !benchmark2ResultsSaved) {
@@ -1128,12 +1158,12 @@ function App() {
 
           {!benchmark2Started && !benchmark2Completed && (
             <div className="benchmark2-start-screen">
-              <h1>Benchmark 2 - Reading Pace Assessment</h1>
-              <p>Read the passage and press SPACE to advance through each word. You have 2 minutes.</p>
+              <h1>Benchmark 2 - Typing Assessment</h1>
+              <p>Type each word exactly as shown. You have 2 minutes.</p>
               <div className="controls-reminder">
-                <div><strong>Blue:</strong> Current word</div>
-                <div><strong>Green:</strong> Words read</div>
-                <div><strong>SPACE:</strong> Advance to next word</div>
+                <div><strong>Blue:</strong> Current word to type</div>
+                <div><strong>Green:</strong> Correct letter</div>
+                <div><strong>Yellow:</strong> Incorrect letter</div>
               </div>
               <button className="begin-benchmark-btn" onClick={startBenchmark2Test}>
                 Begin Assessment
@@ -1153,25 +1183,52 @@ function App() {
               </div>
 
               <div className="reading-passage">
-                {benchmark2Words.map((word, index) => (
-                  <span
-                    key={index}
-                    className={`passage-word ${
-                      index === benchmark2CurrentIndex ? 'current-word' :
-                      benchmark2WordStatuses[index] === 1 ? 'correct-word' :
-                      benchmark2WordStatuses[index] === 3 ? 'skipped-word' :
-                      'unread-word'
-                    }`}
-                  >
-                    {word}{' '}
-                  </span>
-                ))}
+                {benchmark2Words.map((word, wordIndex) => {
+                  const isCurrent = wordIndex === benchmark2CurrentIndex
+                  const status = benchmark2WordStatuses[wordIndex]
+
+                  return (
+                    <span key={wordIndex} className="passage-word">
+                      {isCurrent ? (
+                        // Current word being typed - show character by character coloring
+                        <span className="current-word">
+                          {word.split('').map((char, charIndex) => {
+                            const typedChar = benchmark2TypedWord[charIndex]
+                            let charClass = 'char-untyped'
+
+                            if (typedChar !== undefined) {
+                              charClass = typedChar.toLowerCase() === char.toLowerCase()
+                                ? 'char-correct'
+                                : 'char-incorrect'
+                            }
+
+                            return (
+                              <span key={charIndex} className={charClass}>
+                                {char}
+                              </span>
+                            )
+                          })}
+                        </span>
+                      ) : (
+                        // Previous/future words
+                        <span className={
+                          status === 1 ? 'correct-word' :
+                          status === 3 ? 'skipped-word' :
+                          'unread-word'
+                        }>
+                          {word}
+                        </span>
+                      )}
+                      {' '}
+                    </span>
+                  )
+                })}
               </div>
 
               <div className="benchmark2-controls-display">
                 <div className="control-item">
-                  <div className="control-key">SPACE</div>
-                  <div className="control-label">Mark as Read</div>
+                  <div className="control-key">TYPE</div>
+                  <div className="control-label">Type each word • SPACE to move next</div>
                 </div>
               </div>
             </div>
@@ -1555,7 +1612,7 @@ function App() {
               <div className="separator-line"></div>
 
               <div className="test-description">
-                <p>Read the passage and press SPACE to advance through each word. You have 2 minutes. The current word is highlighted in blue, and words you've read turn green.</p>
+                <p>Type each word exactly as shown. You have 2 minutes. As you type, correct letters turn green and incorrect letters turn yellow. Press SPACE to move to the next word.</p>
               </div>
             </div>
 
