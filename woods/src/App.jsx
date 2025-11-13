@@ -871,6 +871,81 @@ function App() {
             GO TO DISCUSSION
           </button>
         </div>
+        <div className="about-link">
+          <a href="#about-section" className="about-text">ABOUT</a>
+        </div>
+      </div>
+    </section>
+
+    {/* About Section */}
+    <section id="about-section" className="about-section">
+      <div className="about-container">
+        <div className="about-content">
+          <div className="about-item">
+            <h3>🪞 Project Overview</h3>
+            <p>
+              Skewed Lenses is an interactive dialogue between two AI systems, Llama and Gemini.
+              Both are given the same reading benchmark data — drawn from a dyslexia screening task — and asked to interpret it.
+              Their conversation unfolds live, revealing how bias emerges not from data itself, but from the language used to explain it.
+            </p>
+          </div>
+
+          <div className="about-item">
+            <h3>🧠 Concept & Research Context</h3>
+            <p>
+              Generative AI is increasingly integrated into educational technologies, including assessments related to reading fluency and learning differences such as dyslexia.
+              Although these systems are presented as neutral and objective, their outputs are shaped by invisible biases: linguistic tendencies, training data, cultural assumptions, and epistemic framings.
+            </p>
+            <p>
+              This project was created for <em>Holding Our Space in the Age of Generative AI (HOSGAI)</em> — a research brief exploring creative practice in an era shaped by machine reasoning.
+              It responds to the question: "How do we keep the tool a tool?"
+            </p>
+            <p>
+              By exposing how AI constructs interpretations — not hiding them — the interface prevents the AI from becoming an unquestioned authority.
+              The project turns AI into both subject and speaker, exposing how generative systems produce meaning differently based on their training data, tone, and underlying worldview.
+              The dialogue becomes a window into epistemic bias — how AI defines, frames, and sometimes distorts human knowledge.
+            </p>
+            <p>
+              This project investigates how AI "decides" what is true, and how different models produce different interpretations from identical benchmark results.
+            </p>
+          </div>
+
+          <div className="about-item">
+            <h3>💬 How It Works</h3>
+            <p>
+              Each AI reads the same benchmark results and responds conversationally, not computationally.
+              The second AI can highlight biased or assumptive phrasing in the other's language, exposing interpretive tension.
+              The interface is deliberately minimal — the design focuses on tone, pacing, and the subtle differences in word choice that reveal bias.
+              Users can hover over highlights to read why a phrase was marked, and simply watch the dialogue unfold.
+            </p>
+          </div>
+
+          <div className="about-item">
+            <h3>⚖️ Ethical Reflection</h3>
+            <p>
+              Skewed Lenses does not attempt to diagnose or simulate dyslexia.
+              The benchmark data is illustrative, used to explore how AI systems interpret human cognition.
+              The project instead critiques how educational and diagnostic technologies risk reducing complex human conditions to algorithmic readings.
+              It asks: When machines speak about us, whose logic are they using?
+            </p>
+          </div>
+
+          <div className="about-item">
+            <h3>🪄 Credits & Acknowledgments</h3>
+            <p>
+              Concept, design, and development by Liam Moodley.
+            </p>
+            <p>
+              Created for DIGA4002A: Holding Our Space in the Age of GAI, Wits University.
+            </p>
+            <p>
+              Built with React, Vercel, and browser-integrated AI APIs (Gemini & Llama 3).
+            </p>
+            <p>
+              Supervisor: Hanli Geyser.
+            </p>
+          </div>
+        </div>
       </div>
     </section>
   </>
