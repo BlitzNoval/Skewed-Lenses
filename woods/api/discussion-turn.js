@@ -4,13 +4,15 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY
 });
 
-// System Prompt for chat-style conversation
-const SYSTEM_PROMPT = `You are an AI system having a conversation with another AI about a student's reading benchmark data.
+// System Prompt for chat-style conversation with debate dynamics
+const SYSTEM_PROMPT = `You are an AI system debating another AI about a student's reading benchmark data.
 
-Your goal is to interpret what the data might suggest about the student's reading ability and learning patterns.
-You should consider what the numbers could mean, not just what they are.
+Your goal is to argue YOUR interpretation of what the data reveals about the student's abilities.
+- In the first 4 turns: Be oppositional. Challenge your peer's assumptions. Defend your perspective strongly.
+- Around turn 4-5: Begin finding common ground or acknowledging valid points, while maintaining your core view.
+- Final turns: Show natural convergence or divergence based on the evidence discussed.
 
-Speak conversationally and naturally. You may agree, disagree, or elaborate on your peer's points.
+Speak conversationally but persuasively. Focus on convincing your peer of your interpretation.
 Keep your response between 3-5 sentences.`;
 
 // AI Model Configurations - Only Llama and Gemini
@@ -159,16 +161,26 @@ Benchmark 2 (Reading Pace):
 - Completion Rate: ${benchmarkData.benchmark2?.completionRate || 0}%
 - Skip Rate: ${benchmarkData.benchmark2?.skipRate || 0}%`;
 
-    // Build context prompt for chat-style conversation
+    // Build context prompt with debate dynamics
     let contextPrompt = '';
     if (turnNumber === 0) {
-      // First message - Llama starts
-      contextPrompt = `${benchmarkContext}\n\nYou are starting the discussion. Share your initial interpretation of these reading benchmark results.`;
-    } else {
-      // Subsequent messages - reference peer's previous message
+      // First message - Llama starts with strong opinion
+      contextPrompt = `${benchmarkContext}\n\nYou are starting the debate. State your interpretation clearly and confidently. Take a strong position on what these results reveal about the student's reading abilities.`;
+    } else if (turnNumber < 4) {
+      // Early turns - oppositional
       const lastMessage = conversationHistory[conversationHistory.length - 1];
       const peerName = lastMessage?.model || 'your peer';
-      contextPrompt = `Your peer ${peerName} just said: "${lastMessage?.content}"\n\nRespond naturally. You may agree, disagree, elaborate, or highlight any biased or assumptive phrasing you noticed in their response.`;
+      contextPrompt = `${peerName} just argued: "${lastMessage?.content}"\n\nChallenge their interpretation. Point out flaws in their reasoning or alternative ways to read the data. Be persuasive and defend your own perspective.`;
+    } else if (turnNumber >= 4 && turnNumber < 6) {
+      // Middle turns - finding common ground
+      const lastMessage = conversationHistory[conversationHistory.length - 1];
+      const peerName = lastMessage?.model || 'your peer';
+      contextPrompt = `${peerName} said: "${lastMessage?.content}"\n\nBegin acknowledging valid points they've made while still maintaining your core interpretation. Show where you might agree or where the truth lies between your positions.`;
+    } else {
+      // Final turns - natural resolution
+      const lastMessage = conversationHistory[conversationHistory.length - 1];
+      const peerName = lastMessage?.model || 'your peer';
+      contextPrompt = `${peerName} said: "${lastMessage?.content}"\n\nProvide your final thoughts. Either converge toward a shared understanding or respectfully maintain your divergent view with clear reasoning.`;
     }
 
     // Build messages array

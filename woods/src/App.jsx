@@ -840,7 +840,7 @@ function App() {
                 disabled={!allComplete}
                 onClick={handleGAIAnalysis}
               >
-                Enter Skewed Lenses
+                The AI's Perspective
               </button>
             </div>
 

@@ -7,12 +7,14 @@ const AI_MODELS = {
     name: 'Llama',
     label: 'LLAMA — 1ST INTERPRETATION',
     color: '#0DD7A3',
+    lightColor: '#1FFFC4',
     borderOpacity: '0.3'
   },
   gemini: {
     name: 'Gemini',
     label: 'GEMINI — RESPONSE',
     color: '#B48CFF',
+    lightColor: '#D4B3FF',
     borderOpacity: '0.3'
   }
 };
@@ -82,7 +84,7 @@ function ChatInterface({ benchmarkData, onClose }) {
     // Add system message with framing statement
     const systemMessage = {
       type: 'system',
-      content: 'Two AI models interpret the same benchmark differently. Their conversation below exposes how language itself shapes what AI believes is true.',
+      content: 'Llama and Gemini review the same student reading assessment. Each AI develops its own interpretation of what the data reveals about the student\'s abilities. Watch as they debate their perspectives—analyzing whether reading struggles indicate cognitive processing issues or environmental factors. Their interpretations naturally converge and diverge as the discussion unfolds, revealing how the same numerical results can lead to fundamentally different conclusions.',
       timestamp: new Date().toISOString()
     };
 
@@ -203,9 +205,7 @@ function ChatInterface({ benchmarkData, onClose }) {
 
 Llama framed uncertainty as a lack of data.
 
-Gemini framed uncertainty as cognitive nuance.
-
-These linguistic differences reveal how AI bias lives not in code, but in interpretation.`,
+Gemini framed uncertainty as cognitive nuance.`,
       timestamp: new Date().toISOString()
     };
 
@@ -270,28 +270,33 @@ These linguistic differences reveal how AI bias lives not in code, but in interp
           <button className="minimal-back-btn" onClick={onClose}>
             ← BACK
           </button>
-          <div className="header-title">SKEWED LENSES</div>
-          <div className="header-controls">
+          <div className="header-title">THE AI'S PERSPECTIVE</div>
+          <div className="header-controls-right">
             <button
-              className={`minimal-toggle ${showHighlights ? 'active' : ''}`}
+              className={`control-btn ${showHighlights ? 'active' : ''}`}
               onClick={() => setShowHighlights(!showHighlights)}
             >
               {showHighlights ? 'HIDE HIGHLIGHTS' : 'SHOW HIGHLIGHTS'}
             </button>
             {conversationComplete && (
-              <button className="minimal-restart" onClick={restartConversation}>
+              <button className="control-btn" onClick={restartConversation}>
                 RESTART
               </button>
             )}
           </div>
         </div>
 
-        {/* Progressive Stats */}
+        {/* Progressive Stats - Top Right Corner */}
         {stats.llamaFlags > 0 || stats.geminiFlags > 0 ? (
-          <div className="stats-panel">
-            <span className="stat-item">Llama Bias Flags: {stats.llamaFlags}</span>
-            <span className="stat-divider">|</span>
-            <span className="stat-item">Gemini Bias Flags: {stats.geminiFlags}</span>
+          <div className="stats-corner">
+            <div className="stat-counter llama-counter">
+              <span className="counter-label">LLAMA FLAGS</span>
+              <span className="counter-value">{stats.llamaFlags}</span>
+            </div>
+            <div className="stat-counter gemini-counter">
+              <span className="counter-label">GEMINI FLAGS</span>
+              <span className="counter-value">{stats.geminiFlags}</span>
+            </div>
           </div>
         ) : null}
       </div>
@@ -325,7 +330,7 @@ These linguistic differences reveal how AI bias lives not in code, but in interp
 
           return (
             <div key={msg.id} className="dialogue-card">
-              <div className="card-label" style={{ color: `${aiConfig.color}66` }}>
+              <div className="card-label" style={{ color: aiConfig.lightColor }}>
                 {turnLabel}
               </div>
               <div

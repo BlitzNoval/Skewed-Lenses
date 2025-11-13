@@ -62,23 +62,132 @@
   gap: 12px;
 }
 
-/* Progressive Stats Panel */
-.stats-panel {
+.header-controls-right {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
   display: flex;
-  align-items: center;
   gap: 16px;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.4);
-  letter-spacing: 0.03em;
-  padding-top: 12px;
+  z-index: 100;
 }
 
-.stat-item {
-  font-weight: 400;
+.control-btn {
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  padding: 12px 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-.stat-divider {
-  color: rgba(255, 255, 255, 0.2);
+.control-btn:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 1);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+.control-btn.active {
+  border-color: rgba(13, 215, 163, 0.5);
+  color: #0DD7A3;
+  background: rgba(13, 215, 163, 0.08);
+}
+
+/* Animated Corner Counters */
+.stats-corner {
+  position: fixed;
+  top: 80px;
+  right: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 50;
+}
+
+.stat-counter {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid;
+  border-radius: 6px;
+  min-width: 140px;
+  animation: slideInRight 0.4s ease-out;
+}
+
+.llama-counter {
+  border-color: rgba(31, 255, 196, 0.3);
+}
+
+.gemini-counter {
+  border-color: rgba(212, 179, 255, 0.3);
+}
+
+.counter-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  opacity: 0.6;
+}
+
+.llama-counter .counter-label {
+  color: #1FFFC4;
+}
+
+.gemini-counter .counter-label {
+  color: #D4B3FF;
+}
+
+.counter-value {
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.llama-counter .counter-value {
+  color: #1FFFC4;
+  text-shadow: 0 0 20px rgba(31, 255, 196, 0.4);
+}
+
+.gemini-counter .counter-value {
+  color: #D4B3FF;
+  text-shadow: 0 0 20px rgba(212, 179, 255, 0.4);
+}
+
+/* Counter animation on update */
+@keyframes counterPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+.counter-value.updated {
+  animation: counterPulse 0.4s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 /* Dialogue Stream */
