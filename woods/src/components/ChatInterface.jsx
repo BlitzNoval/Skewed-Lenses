@@ -17,39 +17,30 @@ const AI_MODELS = {
   }
 };
 
-// Vote storage helper functions
-const VOTES_STORAGE_KEY = 'skewed_lenses_votes';
-
-const loadVotesFromStorage = () => {
-  try {
-    const stored = localStorage.getItem(VOTES_STORAGE_KEY);
-    return stored ? JSON.parse(stored) : {};
-  } catch (error) {
-    console.error('Failed to load votes:', error);
-    return {};
+// Get or create user session ID
+function getUserSessionId() {
+  let sessionId = localStorage.getItem('user_session_id');
+  if (!sessionId) {
+    sessionId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    localStorage.setItem('user_session_id', sessionId);
   }
-};
+  return sessionId;
+}
 
-const saveVotesToStorage = (votes) => {
-  try {
-    localStorage.setItem(VOTES_STORAGE_KEY, JSON.stringify(votes));
-  } catch (error) {
-    console.error('Failed to save votes:', error);
-  }
-};
-
-function ChatInterface({ benchmarkData, onClose }) {
+function ChatInterface({ benchmarkData, onClose, sessionId }) {
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
   const [showHighlights, setShowHighlights] = useState(true);
   const [conversationComplete, setConversationComplete] = useState(false);
-  const [allVotes, setAllVotes] = useState(() => loadVotesFromStorage()); // All votes from all users
+  const [allVotes, setAllVotes] = useState({}); // Server vote counts
   const [myVotes, setMyVotes] = useState({}); // Current user's votes
   const [stats, setStats] = useState({ llamaFlags: 0, geminiFlags: 0 });
+  const [isNewSession, setIsNewSession] = useState(!sessionId);
   const messagesEndRef = useRef(null);
   const conversationHistoryRef = useRef([]);
+  const userSessionId = useRef(getUserSessionId());
 
-  // Auto-scroll to newest message
+  // Auto-scroll
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -58,14 +49,33 @@ function ChatInterface({ benchmarkData, onClose }) {
     scrollToBottom();
   }, [messages]);
 
-  // Start conversation on mount
+  // Load existing messages if joining existing session
   useEffect(() => {
-    if (messages.length === 0) {
+    if (sessionId && !isNewSession) {
+      loadMessages();
+      loadVotes();
+    }
+  }, [sessionId, isNewSession]);
+
+  // Start new conversation if new session
+  useEffect(() => {
+    if (isNewSession && messages.length === 0) {
       startConversation();
     }
-  }, []);
+  }, [isNewSession]);
 
-  // Calculate stats when messages update
+  // Poll for vote updates every 5 seconds
+  useEffect(() => {
+    if (!sessionId) return;
+
+    const interval = setInterval(() => {
+      loadVotes();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [sessionId]);
+
+  // Calculate stats
   useEffect(() => {
     const llamaFlags = messages
       .filter(m => m.annotations && m.annotations.some(a => a.model === 'llama'))
@@ -78,8 +88,54 @@ function ChatInterface({ benchmarkData, onClose }) {
     setStats({ llamaFlags, geminiFlags });
   }, [messages]);
 
+  const loadMessages = async () => {
+    try {
+      const response = await fetch(`/api/messages/load?sessionId=${sessionId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setMessages(data.messages.map(m => ({
+          id: m.id,
+          type: 'ai',
+          aiModel: m.aiModel,
+          content: m.content,
+          annotations: m.annotations,
+          isTyping: false
+        })));
+
+        // Rebuild conversation history
+        conversationHistoryRef.current = data.messages.map(m => ({
+          role: 'assistant',
+          content: m.content,
+          model: AI_MODELS[m.aiModel]?.name
+        }));
+
+        if (data.messages.length >= 8) {
+          setConversationComplete(true);
+          addReflectionMessage();
+        }
+      }
+    } catch (error) {
+      console.error('Load messages error:', error);
+    }
+  };
+
+  const loadVotes = async () => {
+    if (!sessionId) return;
+
+    try {
+      const response = await fetch(`/api/votes/get?sessionId=${sessionId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setAllVotes(data.voteCounts);
+      }
+    } catch (error) {
+      console.error('Load votes error:', error);
+    }
+  };
+
   const startConversation = () => {
-    // Add system message with framing statement
     const systemMessage = {
       type: 'system',
       content: 'Two AI models interpret the same benchmark differently. Their conversation below exposes how language itself shapes what AI believes is true.',
@@ -87,24 +143,11 @@ function ChatInterface({ benchmarkData, onClose }) {
     };
 
     setMessages([systemMessage]);
-
-    // Start with Llama after brief delay
-    setTimeout(() => {
-      conductTurn('llama', 0);
-    }, 1000);
-  };
-
-  const formatBenchmarkData = (data) => {
-    return `📊 BENCHMARK RESULTS:
-• Fluency: ${data.benchmark1?.fluencyScore?.percentage || 0}%
-• Skip Rate: ${data.benchmark2?.skipRate || 0}%
-• Words Per Minute: ${data.benchmark2?.wordsPerMinute || 0}
-• Comprehension: ${data.benchmark2?.comprehensionLevel || 'Moderate'}`;
+    setTimeout(() => conductTurn('llama', 0), 1000);
   };
 
   const conductTurn = async (modelKey, turnNumber) => {
     if (turnNumber >= 8) {
-      // Stop after 8 turns and show reflection
       setConversationComplete(true);
       addReflectionMessage();
       return;
@@ -113,7 +156,6 @@ function ChatInterface({ benchmarkData, onClose }) {
     setIsTyping(true);
 
     try {
-      // Call API
       const response = await fetch('/api/discussion-turn', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -128,27 +170,47 @@ function ChatInterface({ benchmarkData, onClose }) {
       const data = await response.json();
 
       if (data.success && data.message) {
-        // Add to conversation history
         conversationHistoryRef.current.push({
           role: 'assistant',
           content: data.message,
           model: AI_MODELS[modelKey].name
         });
 
-        // Get annotations from the OTHER AI
+        // Get annotations from other AI
         const otherAI = modelKey === 'llama' ? 'gemini' : 'llama';
         const annotations = await getAnnotations(otherAI, data.message);
 
-        // Type out the message with fade-up animation
-        await typeMessage(modelKey, data.message, annotations, turnNumber);
+        // Save message to server
+        const saveResponse = await fetch('/api/messages/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId,
+            aiModel: modelKey,
+            content: data.message,
+            turnNumber,
+            annotations
+          })
+        });
 
+        const saveData = await saveResponse.json();
+
+        // Add message to UI
+        const message = {
+          id: saveData.message.id,
+          type: 'ai',
+          aiModel: modelKey,
+          content: data.message,
+          annotations,
+          isTyping: false
+        };
+
+        setMessages(prev => [...prev, message]);
         setIsTyping(false);
 
-        // Next turn - alternate between AIs
+        // Next turn
         const nextAI = modelKey === 'llama' ? 'gemini' : 'llama';
-        setTimeout(() => {
-          conductTurn(nextAI, turnNumber + 1);
-        }, 1500);
+        setTimeout(() => conductTurn(nextAI, turnNumber + 1), 1500);
       } else {
         setIsTyping(false);
         setConversationComplete(true);
@@ -178,24 +240,6 @@ function ChatInterface({ benchmarkData, onClose }) {
     return [];
   };
 
-  const typeMessage = (modelKey, text, annotations, turnNumber) => {
-    return new Promise((resolve) => {
-      const message = {
-        id: `msg-${turnNumber}`,
-        type: 'ai',
-        aiModel: modelKey,
-        content: text, // Show full content immediately with fade-up
-        fullContent: text,
-        annotations,
-        isTyping: false,
-        timestamp: new Date().toISOString()
-      };
-
-      setMessages(prev => [...prev, message]);
-      resolve();
-    });
-  };
-
   const addReflectionMessage = () => {
     const reflection = {
       type: 'reflection',
@@ -214,28 +258,37 @@ These linguistic differences reveal how AI bias lives not in code, but in interp
     }, 500);
   };
 
-  const handleBiasVote = (messageId, annotationIndex, vote) => {
+  const handleBiasVote = async (messageId, annotationIndex, vote) => {
     const voteKey = `${messageId}-${annotationIndex}`;
 
-    // Track this user's vote
-    setMyVotes(prev => ({
-      ...prev,
-      [voteKey]: vote
-    }));
+    // Track user's vote locally
+    setMyVotes(prev => ({ ...prev, [voteKey]: vote }));
 
-    // Add to aggregate votes
-    setAllVotes(prev => {
-      const updated = { ...prev };
-      if (!updated[voteKey]) {
-        updated[voteKey] = { valid: 0, invalid: 0 };
+    // Submit to server
+    try {
+      const response = await fetch('/api/votes/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messageId,
+          annotationIndex,
+          voteType: vote,
+          userSession: userSessionId.current
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update vote counts immediately
+        setAllVotes(prev => ({
+          ...prev,
+          [voteKey]: data.counts
+        }));
       }
-
-      updated[voteKey][vote === 'valid' ? 'valid' : 'invalid'] += 1;
-
-      // Save to localStorage
-      saveVotesToStorage(updated);
-      return updated;
-    });
+    } catch (error) {
+      console.error('Vote submit error:', error);
+    }
   };
 
   const getVoteStats = (messageId, annotationIndex) => {
@@ -257,14 +310,15 @@ These linguistic differences reveal how AI bias lives not in code, but in interp
     setMessages([]);
     conversationHistoryRef.current = [];
     setConversationComplete(false);
-    setBiasVotes({});
+    setMyVotes({});
+    setAllVotes({});
     setStats({ llamaFlags: 0, geminiFlags: 0 });
     startConversation();
   };
 
   return (
     <div className="academic-interface">
-      {/* Interpretive Header */}
+      {/* Header */}
       <div className="interface-header">
         <div className="header-top">
           <button className="minimal-back-btn" onClick={onClose}>
@@ -286,7 +340,7 @@ These linguistic differences reveal how AI bias lives not in code, but in interp
           </div>
         </div>
 
-        {/* Progressive Stats */}
+        {/* Stats */}
         {stats.llamaFlags > 0 || stats.geminiFlags > 0 ? (
           <div className="stats-panel">
             <span className="stat-item">Llama Bias Flags: {stats.llamaFlags}</span>
@@ -296,7 +350,7 @@ These linguistic differences reveal how AI bias lives not in code, but in interp
         ) : null}
       </div>
 
-      {/* Dialogue Stream */}
+      {/* Messages */}
       <div className="dialogue-stream">
         {messages.map((msg, index) => {
           if (msg.type === 'system') {
@@ -356,18 +410,12 @@ These linguistic differences reveal how AI bias lives not in code, but in interp
                           "{ann.text}" — {ann.reason}
                         </div>
 
-                        {/* Vote Stats Bar */}
+                        {/* Vote Stats */}
                         {stats.total > 0 && (
                           <div className="vote-stats">
                             <div className="stats-bar">
-                              <div
-                                className="bar-valid"
-                                style={{ width: `${stats.validPercent}%` }}
-                              />
-                              <div
-                                className="bar-invalid"
-                                style={{ width: `${100 - stats.validPercent}%` }}
-                              />
+                              <div className="bar-valid" style={{ width: `${stats.validPercent}%` }} />
+                              <div className="bar-invalid" style={{ width: `${100 - stats.validPercent}%` }} />
                             </div>
                             <div className="stats-text">
                               <span className="stat-valid">{stats.valid} valid</span>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import './App.css'
 import PlasmaBackground from './components/PlasmaBackground'
 import ChatInterface from './components/ChatInterface'
+import SessionBrowser from './components/SessionBrowser'
 import useSpeechStore from './store/useSpeechStore'
 import useSpeechRecognition from './hooks/useSpeechRecognition'
 
@@ -49,6 +50,10 @@ function App() {
   const [benchmark2SaveLoading, setBenchmark2SaveLoading] = useState(false)
   const [benchmark2SaveSuccess, setBenchmark2SaveSuccess] = useState(false)
   const [benchmark2ResultsSaved, setBenchmark2ResultsSaved] = useState(false)
+
+  // Session management states
+  const [currentSessionId, setCurrentSessionId] = useState(null)
+  const [showSessionBrowser, setShowSessionBrowser] = useState(false)
 
   // GAI Analysis states - 3 AI models
   const [gaiAnalysisLoading, setGaiAnalysisLoading] = useState(false)
@@ -205,6 +210,11 @@ function App() {
       setBenchmark2SaveSuccess(true)
       setBenchmark2ResultsSaved(true)
 
+      // Create session if both benchmarks are complete
+      if (benchmarkComplete.benchmark1 || savedBenchmarkResults.benchmark1) {
+        await createSession()
+      }
+
       // Show confetti and then navigate
       setTimeout(() => {
         setBenchmark2SaveSuccess(false)
@@ -254,10 +264,56 @@ function App() {
     setCurrentPage('begin')
   }
 
+  // Create session when both benchmarks are complete
+  const createSession = async () => {
+    try {
+      const response = await fetch('/api/sessions/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: `Discussion ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`,
+          benchmarkData: {
+            benchmark1: savedBenchmarkResults.benchmark1,
+            benchmark2: savedBenchmarkResults.benchmark2
+          }
+        })
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        setCurrentSessionId(data.session.id)
+        console.log('Session created:', data.session.id)
+      }
+    } catch (error) {
+      console.error('Failed to create session:', error)
+    }
+  }
+
   // GAI Analysis function - Launch new Skewed Lenses interface
-  const handleGAIAnalysis = () => {
+  const handleGAIAnalysis = async () => {
     if (!allComplete) return
+
+    // Create session if not already created
+    if (!currentSessionId) {
+      await createSession()
+    }
+
     setCurrentPage('skewed-lenses')
+  }
+
+  // Session browser handlers
+  const handleShowSessionBrowser = () => {
+    setShowSessionBrowser(true)
+  }
+
+  const handleSelectSession = (sessionId) => {
+    setCurrentSessionId(sessionId)
+    setShowSessionBrowser(false)
+    setCurrentPage('skewed-lenses')
+  }
+
+  const handleCloseSessionBrowser = () => {
+    setShowSessionBrowser(false)
   }
 
   // Keyboard event handler for Enter key (Benchmark 1)
@@ -611,6 +667,11 @@ function App() {
       setSaveSuccess(true)
       setResultsSaved(true)
 
+      // Create session if both benchmarks are complete
+      if (allComplete || (benchmarkComplete.benchmark1 && benchmarkKey === 'benchmark2') || (benchmarkComplete.benchmark2 && benchmarkKey === 'benchmark1')) {
+        await createSession()
+      }
+
       // Show confetti and then hide success state
       setTimeout(() => {
         setSaveSuccess(false)
@@ -805,9 +866,9 @@ function App() {
           </button>
           <button
             className="action-button secondary"
-            onClick={() => setCurrentPage('skewed-lenses')}
+            onClick={handleShowSessionBrowser}
           >
-            GO TO DISCUSSION
+            BROWSE CHATS
           </button>
         </div>
       </div>
@@ -1117,7 +1178,16 @@ function App() {
             benchmark1: savedBenchmarkResults.benchmark1,
             benchmark2: savedBenchmarkResults.benchmark2
           }}
+          sessionId={currentSessionId}
           onClose={() => setCurrentPage('begin')}
+        />
+      )}
+
+      {/* Session Browser */}
+      {showSessionBrowser && (
+        <SessionBrowser
+          onSelectSession={handleSelectSession}
+          onClose={handleCloseSessionBrowser}
         />
       )}
 
