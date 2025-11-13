@@ -52,7 +52,11 @@
       "Bash(code --list-extensions:*)",
       "Bash(vsce package:*)",
       "Bash(code:*)",
-      "WebFetch(domain:chatgpt.com)"
+      "WebFetch(domain:chatgpt.com)",
+      "Bash(git checkout:*)",
+      "Bash(/tmp/ChatInterface_backup.jsx)",
+      "Bash(/tmp/App_backup.jsx)",
+      "Bash(/tmp/annotate_backup.js)"
     ],
     "deny": [],
     "ask": []

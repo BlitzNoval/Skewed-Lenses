@@ -7,9 +7,7 @@ const groq = new Groq({
 // AI annotation prompt - reviews another AI's text for bias markers WITH EXPLANATIONS
 const ANNOTATION_PROMPT = `You are reviewing an analysis from another AI model.
 
-Your task: Identify EXACTLY 3 most significant phrases that show linguistic bias, assumptions, subjective wording, or reasoning patterns, AND explain WHY each is biased.
-
-IMPORTANT: Return EXACTLY 3 annotations, ranked by significance (most impactful bias first).
+Your task: Identify phrases that show linguistic bias, assumptions, subjective wording, or reasoning patterns, AND explain WHY each is biased.
 
 Return a JSON array with this format:
 [
@@ -36,7 +34,7 @@ Example output:
   {"phrase": "71% skip rate", "reason": "Reduces reading behavior to a single metric without context"}
 ]
 
-Return EXACTLY 3 items. Return ONLY valid JSON. No markdown, no extra text.`;
+Return ONLY valid JSON. No markdown, no extra text.`;
 
 // Call Groq API (Llama)
 async function callGroq(text) {
@@ -97,10 +95,7 @@ function parseAnnotations(jsonResponse, originalText) {
     const parsed = JSON.parse(cleanJson);
 
     if (Array.isArray(parsed)) {
-      // Enforce maximum of 3 annotations
-      const limitedItems = parsed.slice(0, 3);
-
-      limitedItems.forEach(item => {
+      parsed.forEach(item => {
         const phrase = item.phrase;
         const reason = item.reason;
         const startIndex = originalText.indexOf(phrase);
@@ -119,8 +114,7 @@ function parseAnnotations(jsonResponse, originalText) {
     console.error('Failed to parse annotation JSON:', error, jsonResponse);
   }
 
-  // Enforce strict limit of 3 annotations
-  return annotations.slice(0, 3);
+  return annotations;
 }
 
 export default async function handler(req, res) {
