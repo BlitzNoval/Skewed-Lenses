@@ -17,12 +17,34 @@ const AI_MODELS = {
   }
 };
 
+// Vote storage helper functions
+const VOTES_STORAGE_KEY = 'skewed_lenses_votes';
+
+const loadVotesFromStorage = () => {
+  try {
+    const stored = localStorage.getItem(VOTES_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : {};
+  } catch (error) {
+    console.error('Failed to load votes:', error);
+    return {};
+  }
+};
+
+const saveVotesToStorage = (votes) => {
+  try {
+    localStorage.setItem(VOTES_STORAGE_KEY, JSON.stringify(votes));
+  } catch (error) {
+    console.error('Failed to save votes:', error);
+  }
+};
+
 function ChatInterface({ benchmarkData, onClose }) {
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
   const [showHighlights, setShowHighlights] = useState(true);
   const [conversationComplete, setConversationComplete] = useState(false);
-  const [biasVotes, setBiasVotes] = useState({}); // Track user votes on bias flags
+  const [allVotes, setAllVotes] = useState(() => loadVotesFromStorage()); // All votes from all users
+  const [myVotes, setMyVotes] = useState({}); // Current user's votes
   const [stats, setStats] = useState({ llamaFlags: 0, geminiFlags: 0 });
   const messagesEndRef = useRef(null);
   const conversationHistoryRef = useRef([]);
@@ -194,15 +216,41 @@ These linguistic differences reveal how AI bias lives not in code, but in interp
 
   const handleBiasVote = (messageId, annotationIndex, vote) => {
     const voteKey = `${messageId}-${annotationIndex}`;
-    setBiasVotes(prev => ({
+
+    // Track this user's vote
+    setMyVotes(prev => ({
       ...prev,
       [voteKey]: vote
     }));
+
+    // Add to aggregate votes
+    setAllVotes(prev => {
+      const updated = { ...prev };
+      if (!updated[voteKey]) {
+        updated[voteKey] = { valid: 0, invalid: 0 };
+      }
+
+      updated[voteKey][vote === 'valid' ? 'valid' : 'invalid'] += 1;
+
+      // Save to localStorage
+      saveVotesToStorage(updated);
+      return updated;
+    });
   };
 
-  const getVotePercentage = (messageId, annotationIndex) => {
-    // Simulate consensus - in real app would fetch from backend
-    return Math.floor(Math.random() * 40) + 50; // 50-90%
+  const getVoteStats = (messageId, annotationIndex) => {
+    const voteKey = `${messageId}-${annotationIndex}`;
+    const votes = allVotes[voteKey] || { valid: 0, invalid: 0 };
+    const total = votes.valid + votes.invalid;
+
+    if (total === 0) return { validPercent: 0, total: 0, valid: 0, invalid: 0 };
+
+    return {
+      validPercent: Math.round((votes.valid / total) * 100),
+      total,
+      valid: votes.valid,
+      invalid: votes.invalid
+    };
   };
 
   const restartConversation = () => {
@@ -293,39 +341,67 @@ These linguistic differences reveal how AI bias lives not in code, but in interp
                 )}
               </div>
 
-              {/* Voting Mechanic */}
+              {/* Voting Panel */}
               {!msg.isTyping && showHighlights && msg.annotations && msg.annotations.length > 0 && (
-                <div className="bias-validation">
-                  {msg.annotations.slice(0, 3).map((ann, annIndex) => {
+                <div className="voting-panel">
+                  <div className="panel-header">COMMUNITY BIAS VALIDATION</div>
+                  {msg.annotations.map((ann, annIndex) => {
                     const voteKey = `${msg.id}-${annIndex}`;
-                    const userVote = biasVotes[voteKey];
+                    const userVote = myVotes[voteKey];
+                    const stats = getVoteStats(msg.id, annIndex);
 
                     return (
-                      <div key={annIndex} className="validation-item">
-                        <div className="validation-phrase">
+                      <div key={annIndex} className="vote-item">
+                        <div className="vote-phrase">
                           "{ann.text}" — {ann.reason}
                         </div>
-                        {!userVote ? (
-                          <div className="validation-prompt">
-                            <span className="prompt-text">Is this bias flag valid?</span>
-                            <button
-                              className="vote-btn valid"
-                              onClick={() => handleBiasVote(msg.id, annIndex, 'valid')}
-                            >
-                              ✓ VALID
-                            </button>
-                            <button
-                              className="vote-btn invalid"
-                              onClick={() => handleBiasVote(msg.id, annIndex, 'invalid')}
-                            >
-                              ✗ NOT VALID
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="validation-result">
-                            You voted: {userVote === 'valid' ? 'Valid' : 'Not Valid'} ({getVotePercentage(msg.id, annIndex)}% agree)
+
+                        {/* Vote Stats Bar */}
+                        {stats.total > 0 && (
+                          <div className="vote-stats">
+                            <div className="stats-bar">
+                              <div
+                                className="bar-valid"
+                                style={{ width: `${stats.validPercent}%` }}
+                              />
+                              <div
+                                className="bar-invalid"
+                                style={{ width: `${100 - stats.validPercent}%` }}
+                              />
+                            </div>
+                            <div className="stats-text">
+                              <span className="stat-valid">{stats.valid} valid</span>
+                              <span className="stat-divider">•</span>
+                              <span className="stat-invalid">{stats.invalid} not valid</span>
+                              <span className="stat-total">({stats.total} total votes)</span>
+                            </div>
                           </div>
                         )}
+
+                        {/* Vote Buttons */}
+                        <div className="vote-actions">
+                          {!userVote ? (
+                            <>
+                              <span className="vote-prompt">Is this bias flag valid?</span>
+                              <button
+                                className="vote-btn valid"
+                                onClick={() => handleBiasVote(msg.id, annIndex, 'valid')}
+                              >
+                                ✓ VALID
+                              </button>
+                              <button
+                                className="vote-btn invalid"
+                                onClick={() => handleBiasVote(msg.id, annIndex, 'invalid')}
+                              >
+                                ✗ NOT VALID
+                              </button>
+                            </>
+                          ) : (
+                            <span className="user-voted">
+                              You voted: {userVote === 'valid' ? '✓ Valid' : '✗ Not Valid'}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     );
                   })}

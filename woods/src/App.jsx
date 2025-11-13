@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
 import './App.css'
-import OneInTen from './components/Globe'
 import PlasmaBackground from './components/PlasmaBackground'
 import ChatInterface from './components/ChatInterface'
 import useSpeechStore from './store/useSpeechStore'
@@ -806,26 +805,10 @@ function App() {
           </button>
           <button
             className="action-button secondary"
-            onClick={() => {
-              document.querySelector('.second-section').scrollIntoView({
-                behavior: 'smooth'
-              });
-            }}
+            onClick={() => setCurrentPage('skewed-lenses')}
           >
-            MY MISSION
+            GO TO DISCUSSION
           </button>
-        </div>
-      </div>
-    </section>
-
-    <section className="second-section">
-      <div className="section-content">
-        <div className="text-block">
-          <h2>1 in 10 People Have Dyslexia</h2>
-          <p className="reference">Source: International Dyslexia Association</p>
-        </div>
-        <div className="globe-container">
-          <OneInTen />
         </div>
       </div>
     </section>
