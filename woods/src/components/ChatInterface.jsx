@@ -182,19 +182,40 @@ function ChatInterface({ benchmarkData, onClose }) {
 
   const typeMessage = (modelKey, text, annotations, turnNumber) => {
     return new Promise((resolve) => {
-      const message = {
-        id: `msg-${turnNumber}`,
+      // First, add a typing indicator
+      const typingMessage = {
+        id: `typing-${turnNumber}`,
         type: 'ai',
         aiModel: modelKey,
-        content: text, // Show full content immediately with fade-up
+        content: '',
         fullContent: text,
         annotations,
-        isTyping: false,
+        isTyping: true,
         timestamp: new Date().toISOString()
       };
 
-      setMessages(prev => [...prev, message]);
-      resolve();
+      setMessages(prev => [...prev, typingMessage]);
+
+      // Simulate typing delay
+      const typingDuration = Math.min(text.length * 15, 2000); // Max 2 seconds
+
+      setTimeout(() => {
+        // Replace typing indicator with full message
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === `typing-${turnNumber}`
+              ? {
+                  ...msg,
+                  id: `msg-${turnNumber}`,
+                  content: text,
+                  isTyping: false,
+                  showTypingAnimation: true
+                }
+              : msg
+          )
+        );
+        resolve();
+      }, typingDuration);
     });
   };
 
@@ -338,12 +359,18 @@ Gemini framed uncertainty as cognitive nuance.`,
                 {turnLabel}
               </div>
               <div
-                className="card-content"
+                className={`card-content ${msg.showTypingAnimation ? 'typing-animation' : ''}`}
                 style={{
                   borderColor: `${aiConfig.color}${Math.round(parseFloat(aiConfig.borderOpacity) * 255).toString(16).padStart(2, '0')}`
                 }}
               >
-                {showHighlights && msg.annotations && msg.annotations.length > 0 ? (
+                {msg.isTyping ? (
+                  <div className="typing-indicator">
+                    <span className="dot" style={{ backgroundColor: aiConfig.lightColor }}></span>
+                    <span className="dot" style={{ backgroundColor: aiConfig.lightColor }}></span>
+                    <span className="dot" style={{ backgroundColor: aiConfig.lightColor }}></span>
+                  </div>
+                ) : showHighlights && msg.annotations && msg.annotations.length > 0 ? (
                   <AnnotatedText text={msg.content} annotations={msg.annotations} />
                 ) : (
                   <p>{msg.content}</p>
