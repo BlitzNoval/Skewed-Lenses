@@ -3784,10 +3784,13 @@
   letter-spacing: 0.05em;
   transition: all 0.3s ease;
   cursor: pointer;
+  display: inline-block;
 }
 
 .about-text:hover {
   color: #666666;
+  letter-spacing: 0.15em;
+  transform: translateX(2px);
 }
 
 /* About Section - Minimal Editorial Design */

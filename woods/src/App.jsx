@@ -872,7 +872,7 @@ function App() {
           </button>
         </div>
         <div className="about-link">
-          <a href="#about-section" className="about-text">ABOUT</a>
+          <a href="#about-section" className="about-text">ABOUT THIS PROJECT</a>
         </div>
       </div>
     </section>
