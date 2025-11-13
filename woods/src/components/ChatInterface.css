@@ -282,12 +282,19 @@
   margin-top: 1em;
 }
 
+/* Typing Container */
+.typing-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 0;
+}
+
 /* Typing Indicator */
 .typing-indicator {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 0;
 }
 
 .typing-indicator .dot {
@@ -318,6 +325,24 @@
   30% {
     transform: translateY(-10px);
     opacity: 1;
+  }
+}
+
+/* Thinking Phrase */
+.thinking-phrase {
+  margin: 0;
+  font-size: 13px;
+  font-style: italic;
+  opacity: 0.7;
+  animation: fadeInOut 2s ease-in-out infinite;
+}
+
+@keyframes fadeInOut {
+  0%, 100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
   }
 }
 

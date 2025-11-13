@@ -8,14 +8,38 @@ const AI_MODELS = {
     label: 'LLAMA — 1ST INTERPRETATION',
     color: '#0DD7A3',
     lightColor: '#1FFFC4',
-    borderOpacity: '0.3'
+    borderOpacity: '0.3',
+    thinkingPhrases: [
+      'crunching the numbers...',
+      'running stats through the matrix...',
+      'debugging my assumptions...',
+      'compiling evidence...',
+      'while(true) { think(); }',
+      'checking for off-by-one errors...',
+      'parsing data like it\'s JSON...',
+      'calculating confidence intervals...',
+      'console.log("hmm...")...',
+      'trying to optimize this argument...'
+    ]
   },
   gemini: {
     name: 'Gemini',
     label: 'GEMINI — RESPONSE',
     color: '#B48CFF',
     lightColor: '#D4B3FF',
-    borderOpacity: '0.3'
+    borderOpacity: '0.3',
+    thinkingPhrases: [
+      'reading between the lines...',
+      'contemplating the human element...',
+      'try { understand(); } catch...',
+      'considering alternative perspectives...',
+      'questioning my own biases...',
+      'thinking outside the dataset...',
+      'refactoring my interpretation...',
+      'awaiting deeper insights...',
+      'git commit -m "rethinking this"...',
+      'deploying empathy.exe...'
+    ]
   }
 };
 
@@ -182,7 +206,13 @@ function ChatInterface({ benchmarkData, onClose }) {
 
   const typeMessage = (modelKey, text, annotations, turnNumber) => {
     return new Promise((resolve) => {
-      // First, add a typing indicator
+      const aiConfig = AI_MODELS[modelKey];
+      const phrases = aiConfig.thinkingPhrases;
+
+      // Pick a random thinking phrase
+      const thinkingPhrase = phrases[Math.floor(Math.random() * phrases.length)];
+
+      // First, add a typing indicator with thinking phrase
       const typingMessage = {
         id: `typing-${turnNumber}`,
         type: 'ai',
@@ -191,13 +221,14 @@ function ChatInterface({ benchmarkData, onClose }) {
         fullContent: text,
         annotations,
         isTyping: true,
+        thinkingPhrase,
         timestamp: new Date().toISOString()
       };
 
       setMessages(prev => [...prev, typingMessage]);
 
-      // Simulate typing delay
-      const typingDuration = Math.min(text.length * 15, 2000); // Max 2 seconds
+      // Longer typing delay - 2.5 to 4 seconds
+      const typingDuration = Math.min(text.length * 20, 4000) + 1000;
 
       setTimeout(() => {
         // Replace typing indicator with full message
@@ -365,10 +396,15 @@ Gemini framed uncertainty as cognitive nuance.`,
                 }}
               >
                 {msg.isTyping ? (
-                  <div className="typing-indicator">
-                    <span className="dot" style={{ backgroundColor: aiConfig.lightColor }}></span>
-                    <span className="dot" style={{ backgroundColor: aiConfig.lightColor }}></span>
-                    <span className="dot" style={{ backgroundColor: aiConfig.lightColor }}></span>
+                  <div className="typing-container">
+                    <div className="typing-indicator">
+                      <span className="dot" style={{ backgroundColor: aiConfig.lightColor }}></span>
+                      <span className="dot" style={{ backgroundColor: aiConfig.lightColor }}></span>
+                      <span className="dot" style={{ backgroundColor: aiConfig.lightColor }}></span>
+                    </div>
+                    <p className="thinking-phrase" style={{ color: aiConfig.lightColor }}>
+                      {msg.thinkingPhrase}
+                    </p>
                   </div>
                 ) : showHighlights && msg.annotations && msg.annotations.length > 0 ? (
                   <AnnotatedText text={msg.content} annotations={msg.annotations} />
