@@ -102,7 +102,7 @@ function App() {
       return
     }
 
-    // Handle space - move to next word
+    // Handle space - move to next word (only if word is complete or partially typed)
     if (char === ' ') {
       if (currentTyped.length > 0) {
         // Check if typed word matches
@@ -129,6 +129,27 @@ function App() {
       const newTyped = currentTyped + char.toLowerCase()
       setBenchmark2TypedWord(prev => prev + char)
       setBenchmark2CurrentCharIndex(prev => prev + 1)
+
+      // Auto-advance when word is complete
+      if (newTyped.length === currentWord.length) {
+        // Check if typed word matches
+        const newStatuses = [...benchmark2WordStatuses]
+        newStatuses[benchmark2CurrentIndex] = newTyped === currentWord ? 1 : 3
+        setBenchmark2WordStatuses(newStatuses)
+
+        // Move to next word automatically
+        setTimeout(() => {
+          const nextIndex = benchmark2CurrentIndex + 1
+          setBenchmark2CurrentIndex(nextIndex)
+          setBenchmark2TypedWord('')
+          setBenchmark2CurrentCharIndex(0)
+
+          // Check if we've reached the end
+          if (nextIndex >= benchmark2Words.length) {
+            completeBenchmark2()
+          }
+        }, 100) // Small delay for visual feedback
+      }
     }
   }
 
@@ -1185,13 +1206,14 @@ function App() {
               <div className="reading-passage">
                 {benchmark2Words.map((word, wordIndex) => {
                   const isCurrent = wordIndex === benchmark2CurrentIndex
+                  const isPast = wordIndex < benchmark2CurrentIndex
                   const status = benchmark2WordStatuses[wordIndex]
 
                   return (
                     <span key={wordIndex} className="passage-word">
                       {isCurrent ? (
                         // Current word being typed - show character by character coloring
-                        <span className="current-word">
+                        <span>
                           {word.split('').map((char, charIndex) => {
                             const typedChar = benchmark2TypedWord[charIndex]
                             let charClass = 'char-untyped'
@@ -1209,13 +1231,21 @@ function App() {
                             )
                           })}
                         </span>
+                      ) : isPast ? (
+                        // Previous words - keep them colored based on status
+                        <span>
+                          {word.split('').map((char, charIndex) => (
+                            <span
+                              key={charIndex}
+                              className={status === 1 ? 'char-correct' : 'char-incorrect'}
+                            >
+                              {char}
+                            </span>
+                          ))}
+                        </span>
                       ) : (
-                        // Previous/future words
-                        <span className={
-                          status === 1 ? 'correct-word' :
-                          status === 3 ? 'skipped-word' :
-                          'unread-word'
-                        }>
+                        // Future words - show as untyped
+                        <span className="unread-word">
                           {word}
                         </span>
                       )}
@@ -1228,7 +1258,7 @@ function App() {
               <div className="benchmark2-controls-display">
                 <div className="control-item">
                   <div className="control-key">TYPE</div>
-                  <div className="control-label">Type each word • SPACE to move next</div>
+                  <div className="control-label">Type each word • Auto-advances when complete</div>
                 </div>
               </div>
             </div>
