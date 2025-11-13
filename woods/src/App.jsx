@@ -497,7 +497,13 @@ function App() {
   // Scroll detection for back to top button
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 300) {
+      const scrollPosition = window.scrollY
+      const windowHeight = window.innerHeight
+      const documentHeight = document.documentElement.scrollHeight
+      const distanceFromBottom = documentHeight - (scrollPosition + windowHeight)
+
+      // Show if scrolled down more than 300px AND not within 200px of bottom
+      if (scrollPosition > 300 && distanceFromBottom > 200) {
         setShowScrollTop(true)
       } else {
         setShowScrollTop(false)
