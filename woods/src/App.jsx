@@ -512,22 +512,6 @@ function App() {
     initializeBenchmark2()
   }
 
-  // Benchmark 2 helper functions
-  const initializeBenchmark2 = () => {
-    const cleanedText = benchmark2Passage.replace(/[.,!?;:]/g, '')
-    const words = cleanedText.split(' ').filter(word => word.trim())
-    setBenchmark2Words(words)
-    setBenchmark2WordStatuses(new Array(words.length).fill(0)) // 0 = unread
-    setBenchmark2CurrentIndex(0)
-    setBenchmark2Timer(120) // 2 minutes
-    setBenchmark2Completed(false)
-    setBenchmark2Results(null)
-  }
-
-  const startBenchmark2Test = () => {
-    setBenchmark2Started(true)
-  }
-
   const startTest = () => {
     // Initialize the assessment with sentences
     const testChunks = createTestChunks(passage)
