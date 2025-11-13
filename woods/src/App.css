@@ -471,14 +471,14 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   padding: 2rem;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(0, 0, 0, 0.9);
 }
 
 .about-benchmarks h3 {
   font-size: 1.4rem;
   font-weight: 600;
   margin-bottom: 1rem;
-  color: rgba(255, 255, 255, 0.95);
+  color: rgba(0, 0, 0, 0.95);
   letter-spacing: -0.02em;
 }
 
@@ -497,20 +497,20 @@
   font-size: 1.05rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(0, 0, 0, 0.9);
 }
 
 .benchmark-description p {
   font-size: 0.9rem;
   line-height: 1.5;
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(17, 17, 17, 0.65);
   margin: 0;
 }
 
 .ai-perspective-note {
   font-size: 0.9rem;
   line-height: 1.6;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(31, 31, 31, 0.6);
   font-style: italic;
   margin-top: 1.5rem;
   padding-top: 1.5rem;
