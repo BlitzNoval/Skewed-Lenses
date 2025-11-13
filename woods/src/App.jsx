@@ -1003,6 +1003,12 @@ function App() {
             </p>
           </div>
         </div>
+        <div className="back-to-top">
+          <a href="#" className="back-to-top-link">
+            <span className="back-arrow">↑</span>
+            <span className="back-text">BACK TO TOP</span>
+          </a>
+        </div>
       </div>
     </section>
   </>

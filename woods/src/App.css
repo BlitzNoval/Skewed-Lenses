@@ -3922,3 +3922,45 @@
     font-size: 1.4rem;
   }
 }
+
+/* Back to Top Button */
+.back-to-top {
+  margin-top: 4rem;
+  padding-top: 3rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: center;
+}
+
+.back-to-top-link {
+  font-family: 'SF Pro Display', 'Helvetica Neue', 'Segoe UI', 'Arial', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #acacac;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.back-to-top-link:hover {
+  color: #e5e5e5;
+  transform: translateY(-2px);
+}
+
+.back-arrow {
+  font-size: 18px;
+  display: inline-block;
+  transition: transform 0.3s ease;
+}
+
+.back-to-top-link:hover .back-arrow {
+  transform: translateY(-3px);
+}
+
+.back-text {
+  display: inline-block;
+}
