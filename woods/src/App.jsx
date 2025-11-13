@@ -9,6 +9,7 @@ function App() {
   const [currentPage, setCurrentPage] = useState('home')
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
+  const [showScrollTop, setShowScrollTop] = useState(false)
   const [benchmarkComplete, setBenchmarkComplete] = useState({
     benchmark1: false,
     benchmark2: false
@@ -493,6 +494,28 @@ function App() {
     loadSavedBenchmarks()
   }, [])
 
+  // Scroll detection for back to top button
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 300) {
+        setShowScrollTop(true)
+      } else {
+        setShowScrollTop(false)
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // Smooth scroll handler
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    })
+  }
+
   // Initialize assessment sentences
   useEffect(() => {
     const testChunks = createTestChunks(passage)
@@ -807,6 +830,14 @@ function App() {
   return (
     <div className={`App ${isDarkMode ? 'dark-mode' : ''} ${currentPage === 'home' ? 'home-page' : ''}`}>
       {currentPage === 'home' && <PlasmaBackground />}
+
+      {/* Floating Scroll to Top Button */}
+      {showScrollTop && currentPage === 'home' && (
+        <button className="floating-scroll-top" onClick={scrollToTop}>
+          <span className="scroll-arrow">↑</span>
+        </button>
+      )}
+
       <div className="dark-mode-toggle">
         <button
           className={`toggle-switch ${isDarkMode ? 'active' : ''}`}

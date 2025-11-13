@@ -8,6 +8,10 @@
   scroll-behavior: smooth;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 .App::before {
   content: '';
   position: fixed;
@@ -3963,4 +3967,65 @@
 
 .back-text {
   display: inline-block;
+}
+
+/* Floating Scroll to Top Button */
+.floating-scroll-top {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 50px;
+  height: 50px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1000;
+  transition: all 0.3s ease;
+  animation: fadeInUp 0.3s ease;
+}
+
+.floating-scroll-top:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-4px);
+}
+
+.scroll-arrow {
+  font-size: 24px;
+  color: #000000;
+  line-height: 1;
+  transition: transform 0.3s ease;
+}
+
+.floating-scroll-top:hover .scroll-arrow {
+  transform: translateY(-2px);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .floating-scroll-top {
+    bottom: 1.5rem;
+    right: 1.5rem;
+    width: 45px;
+    height: 45px;
+  }
+
+  .scroll-arrow {
+    font-size: 20px;
+  }
 }
