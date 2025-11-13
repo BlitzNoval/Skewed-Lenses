@@ -3788,56 +3788,76 @@
 
 .about-text:hover {
   color: #666666;
-  transform: translateY(-2px);
 }
 
-/* About Section - Dark Theme */
+/* About Section - Minimal Editorial Design */
 .about-section {
   min-height: 100vh;
   width: 100%;
-  background: #0c0c0f;
-  padding: 8rem 4rem;
+  background: #0b0b0d;
+  padding: 6rem 2rem;
   position: relative;
   z-index: 10;
 }
 
 .about-container {
-  max-width: 1400px;
+  max-width: 700px;
   margin: 0 auto;
-  padding-left: 2rem;
 }
 
 .about-content {
   display: flex;
   flex-direction: column;
-  gap: 3rem;
+  gap: 0;
 }
 
 .about-item {
   background: transparent;
-  padding: 0;
+  padding: 3rem 0;
   border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   text-align: left;
+}
+
+.about-item:last-child {
+  border-bottom: none;
 }
 
 .about-item h3 {
   font-family: 'SF Pro Display', 'Helvetica Neue', 'Segoe UI', 'Arial', sans-serif;
-  font-size: 1.8rem;
+  font-size: 13px;
   font-weight: 600;
-  color: #eaeaea;
+  color: rgba(229, 229, 229, 0.85);
   margin-bottom: 1.5rem;
-  letter-spacing: -0.01em;
+  letter-spacing: 1px;
+  text-transform: uppercase;
   text-align: left;
+  position: relative;
+  padding-left: 1rem;
+}
+
+.about-item h3:before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #1f9e8c;
+}
+
+.about-item:nth-child(even) h3:before {
+  background: #7b5df5;
 }
 
 .about-item p {
   font-family: 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', 'Arial', sans-serif;
-  font-size: 1.25rem;
-  line-height: 2.0;
-  color: #eaeaea;
-  margin-bottom: 1.2rem;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #e5e5e5;
+  margin-bottom: 1rem;
   text-align: left;
-  max-width: 90%;
+  font-weight: 400;
 }
 
 .about-item p:last-child {
@@ -3852,41 +3872,47 @@
 
 .about-item ul li {
   font-family: 'SF Pro Text', 'Helvetica Neue', 'Segoe UI', 'Arial', sans-serif;
-  font-size: 1.25rem;
-  line-height: 2.0;
-  color: #eaeaea;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #e5e5e5;
   margin-bottom: 0.5rem;
-  padding-left: 2rem;
+  padding-left: 1.5rem;
   position: relative;
   text-align: left;
+  font-weight: 400;
 }
 
 .about-item ul li:before {
   content: "—";
   position: absolute;
   left: 0;
-  color: #666;
+  color: #acacac;
+  font-size: 14px;
 }
 
 /* Responsive About Section */
 @media (max-width: 768px) {
   .about-section {
-    padding: 4rem 2rem;
+    padding: 4rem 1.5rem;
   }
 
   .about-container {
-    padding-left: 1rem;
+    max-width: 100%;
+  }
+
+  .about-item {
+    padding: 2rem 0;
   }
 
   .about-item h3 {
-    font-size: 1.4rem;
+    font-size: 12px;
+    letter-spacing: 0.8px;
   }
 
   .about-item p,
   .about-item ul li {
-    font-size: 1.1rem;
-    line-height: 1.8;
-    max-width: 100%;
+    font-size: 14px;
+    line-height: 1.6;
   }
 
   .about-text {

@@ -882,7 +882,7 @@ function App() {
       <div className="about-container">
         <div className="about-content">
           <div className="about-item">
-            <h3>🌑 1. What This Project Is</h3>
+            <h3>What This Project Is</h3>
             <p>
               Skewed Lenses stages a conversation between two AI systems — Llama and Gemini — as they interpret the same dyslexia benchmark results.
               Instead of producing answers, they reveal their assumptions.
@@ -897,10 +897,9 @@ function App() {
           </div>
 
           <div className="about-item">
-            <h3>🧭 2. Why It Exists (Real Context, Not Generic Stuff)</h3>
+            <h3>Why It Exists</h3>
             <p>
-              This project comes directly from the HOSGAI question:
-              How do we keep the tool a tool?
+              This project comes directly from the HOSGAI question: How do we keep the tool a tool?
             </p>
             <p>
               We do it by refusing to let AI speak with authority, and instead forcing it to speak in front of us.
@@ -910,8 +909,7 @@ function App() {
               That difference is bias.
             </p>
             <p>
-              This is not about dyslexia.
-              It's about:
+              This is not about dyslexia. It's about:
             </p>
             <ul>
               <li>how machines interpret human cognition</li>
@@ -920,13 +918,12 @@ function App() {
               <li>how neutrality is performed, not real</li>
             </ul>
             <p>
-              This is how your project ties into HOSGAI:
-              You turned AI from a diagnostic instrument into something that must justify its thinking.
+              This is how your project ties into HOSGAI: You turned AI from a diagnostic instrument into something that must justify its thinking.
             </p>
           </div>
 
           <div className="about-item">
-            <h3>💭 3. What You Can See Here</h3>
+            <h3>What You Can See Here</h3>
             <p>
               When Llama and Gemini talk, you will notice:
             </p>
@@ -956,7 +953,7 @@ function App() {
           </div>
 
           <div className="about-item">
-            <h3>🎛️ 4. How It Works (Minimal + Human Version)</h3>
+            <h3>How It Works</h3>
             <ul>
               <li>Both models receive the same benchmark summary.</li>
               <li>Llama speaks first.</li>
@@ -966,18 +963,14 @@ function App() {
               <li>You watch their reasoning drift, diverge, intersect, and contradict.</li>
             </ul>
             <p>
-              No AI here is "correct."
-              The value lies in observing how they interpret, not what they conclude.
+              No AI here is "correct." The value lies in observing how they interpret, not what they conclude.
             </p>
           </div>
 
           <div className="about-item">
-            <h3>⚠️ 5. What This Is Not</h3>
+            <h3>What This Is Not</h3>
             <p>
-              This is not a diagnostic tool.
-              It does not detect dyslexia.
-              It does not evaluate users.
-              It does not replace teachers, psychologists, or human interpretation.
+              This is not a diagnostic tool. It does not detect dyslexia. It does not evaluate users. It does not replace teachers, psychologists, or human interpretation.
             </p>
             <p>
               This is a critical demonstration of how AI constructs meaning — even in spaces where precision and care are essential.
@@ -985,23 +978,20 @@ function App() {
           </div>
 
           <div className="about-item">
-            <h3>✍️ 6. The Real Question Behind the Project</h3>
+            <h3>The Real Question</h3>
             <p>
               "What happens when machines explain humans?"
             </p>
             <p>
-              More specifically:
-              What do their words reveal about the systems that produced them?
+              More specifically: What do their words reveal about the systems that produced them?
             </p>
             <p>
-              Everything you see on this page — the tone, the highlights, the disagreements — is a reminder that AI is not neutral.
-              It is a lens.
-              And every lens is skewed.
+              Everything you see on this page — the tone, the highlights, the disagreements — is a reminder that AI is not neutral. It is a lens. And every lens is skewed.
             </p>
           </div>
 
           <div className="about-item">
-            <h3>🪪 7. Credits</h3>
+            <h3>Credits</h3>
             <p>
               Designed and built by Liam Moodley
             </p>
