@@ -56,7 +56,9 @@
       "Bash(git checkout:*)",
       "Bash(/tmp/ChatInterface_backup.jsx)",
       "Bash(/tmp/App_backup.jsx)",
-      "Bash(/tmp/annotate_backup.js)"
+      "Bash(/tmp/annotate_backup.js)",
+      "Bash(/tmp/App_old_benchmark2.jsx)",
+      "Bash(/tmp/App_old.css)"
     ],
     "deny": [],
     "ask": []
