@@ -43,7 +43,7 @@ const saveVotesToStorage = (votes) => {
 function ChatInterface({ benchmarkData, onClose }) {
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
-  const [showHighlights, setShowHighlights] = useState(true);
+  const [showHighlights, setShowHighlights] = useState(false);
   const [conversationComplete, setConversationComplete] = useState(false);
   const [allVotes, setAllVotes] = useState(() => loadVotesFromStorage()); // All votes from all users
   const [myVotes, setMyVotes] = useState({}); // Current user's votes
@@ -84,7 +84,7 @@ function ChatInterface({ benchmarkData, onClose }) {
     // Add system message with framing statement
     const systemMessage = {
       type: 'system',
-      content: 'Llama and Gemini review the same student reading assessment. Each AI develops its own interpretation of what the data reveals about the student\'s abilities. Watch as they debate their perspectives—analyzing whether reading struggles indicate cognitive processing issues or environmental factors. Their interpretations naturally converge and diverge as the discussion unfolds, revealing how the same numerical results can lead to fundamentally different conclusions.',
+      content: 'Two AIs debate the same student reading data. After they finish, vote on which interpretations show bias.',
       timestamp: new Date().toISOString()
     };
 
@@ -211,6 +211,8 @@ Gemini framed uncertainty as cognitive nuance.`,
 
     setTimeout(() => {
       setMessages(prev => [...prev, reflection]);
+      // Auto-enable highlights when conversation completes
+      setShowHighlights(true);
     }, 500);
   };
 
@@ -272,16 +274,18 @@ Gemini framed uncertainty as cognitive nuance.`,
           </button>
           <div className="header-title">THE AI'S PERSPECTIVE</div>
           <div className="header-controls-right">
-            <button
-              className={`control-btn ${showHighlights ? 'active' : ''}`}
-              onClick={() => setShowHighlights(!showHighlights)}
-            >
-              {showHighlights ? 'HIDE HIGHLIGHTS' : 'SHOW HIGHLIGHTS'}
-            </button>
             {conversationComplete && (
-              <button className="control-btn" onClick={restartConversation}>
-                RESTART
-              </button>
+              <>
+                <button
+                  className={`control-btn ${showHighlights ? 'active' : ''}`}
+                  onClick={() => setShowHighlights(!showHighlights)}
+                >
+                  {showHighlights ? 'HIDE FLAGS' : 'SHOW FLAGS'}
+                </button>
+                <button className="control-btn" onClick={restartConversation}>
+                  REPROMPT
+                </button>
+              </>
             )}
           </div>
         </div>

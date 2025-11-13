@@ -18,9 +18,10 @@
 
 .header-top {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   margin-bottom: 16px;
+  position: relative;
 }
 
 .header-title {
@@ -28,6 +29,14 @@
   font-weight: 600;
   letter-spacing: 0.1em;
   color: rgba(255, 255, 255, 0.5);
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.minimal-back-btn {
+  position: absolute;
+  left: 0;
 }
 
 .minimal-back-btn,
