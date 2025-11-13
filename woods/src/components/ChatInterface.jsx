@@ -18,7 +18,7 @@ const AI_MODELS = {
       'checking for off-by-one errors...',
       'parsing data like it\'s JSON...',
       'calculating confidence intervals...',
-      'console.log("hmm...")...',
+      'console.log("thinking...")...',
       'trying to optimize this argument...'
     ]
   },
@@ -74,6 +74,7 @@ function ChatInterface({ benchmarkData, onClose }) {
   const [stats, setStats] = useState({ llamaFlags: 0, geminiFlags: 0 });
   const messagesEndRef = useRef(null);
   const conversationHistoryRef = useRef([]);
+  const usedPhrasesRef = useRef({ llama: [], gemini: [] }); // Track used phrases per AI
 
   // Auto-scroll to newest message
   const scrollToBottom = () => {
@@ -209,8 +210,20 @@ function ChatInterface({ benchmarkData, onClose }) {
       const aiConfig = AI_MODELS[modelKey];
       const phrases = aiConfig.thinkingPhrases;
 
-      // Pick a random thinking phrase
-      const thinkingPhrase = phrases[Math.floor(Math.random() * phrases.length)];
+      // Pick a random thinking phrase that hasn't been used yet
+      const usedPhrases = usedPhrasesRef.current[modelKey];
+      const availablePhrases = phrases.filter(p => !usedPhrases.includes(p));
+
+      // If all phrases have been used, reset for this AI
+      const phrasesToChooseFrom = availablePhrases.length > 0 ? availablePhrases : phrases;
+      if (availablePhrases.length === 0) {
+        usedPhrasesRef.current[modelKey] = [];
+      }
+
+      const thinkingPhrase = phrasesToChooseFrom[Math.floor(Math.random() * phrasesToChooseFrom.length)];
+
+      // Mark this phrase as used
+      usedPhrasesRef.current[modelKey].push(thinkingPhrase);
 
       // First, add a typing indicator with thinking phrase
       const typingMessage = {
@@ -310,6 +323,7 @@ Gemini framed uncertainty as cognitive nuance.`,
   const restartConversation = () => {
     setMessages([]);
     conversationHistoryRef.current = [];
+    usedPhrasesRef.current = { llama: [], gemini: [] }; // Reset used phrases
     setConversationComplete(false);
     setBiasVotes({});
     setStats({ llamaFlags: 0, geminiFlags: 0 });

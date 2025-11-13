@@ -37,11 +37,12 @@ function App() {
   const [audioLevel, setAudioLevel] = useState(0)
   const [noInputDetected, setNoInputDetected] = useState(false)
 
-  // Benchmark 2 specific states
+  // Benchmark 2 specific states - Typing test
   const [benchmark2Active, setBenchmark2Active] = useState(false)
-  const [benchmark2Timer, setBenchmark2Timer] = useState(120) // 2 minutes in seconds
-  const [benchmark2Words, setBenchmark2Words] = useState([])
-  const [benchmark2CurrentIndex, setBenchmark2CurrentIndex] = useState(0)
+  const [benchmark2CurrentSentence, setBenchmark2CurrentSentence] = useState(0)
+  const [benchmark2CurrentWord, setBenchmark2CurrentWord] = useState(0)
+  const [benchmark2CurrentChar, setBenchmark2CurrentChar] = useState(0)
+  const [benchmark2TypedInput, setBenchmark2TypedInput] = useState('')
   const [benchmark2WordStatuses, setBenchmark2WordStatuses] = useState([])
   const [benchmark2Started, setBenchmark2Started] = useState(false)
   const [benchmark2Completed, setBenchmark2Completed] = useState(false)
@@ -83,92 +84,96 @@ function App() {
     resetBenchmark
   } = useSpeechStore()
 
-  // Benchmark 2 helper functions - defined before useEffect hooks
-  const handleBenchmark2WordAction = (statusCode) => {
-    if (benchmark2CurrentIndex >= benchmark2Words.length) return
+  // Benchmark 2 typing helper functions
+  const handleTyping = (key) => {
+    if (!benchmark2Started || benchmark2Completed) return
 
-    // Update word status
-    const newStatuses = [...benchmark2WordStatuses]
-    newStatuses[benchmark2CurrentIndex] = statusCode
-    setBenchmark2WordStatuses(newStatuses)
+    const currentSentence = benchmark2Sentences[benchmark2CurrentSentence]
+    const currentWord = currentSentence[benchmark2CurrentWord]
+    const expectedChar = currentWord[benchmark2CurrentChar]
 
-    // Move to next word
-    const nextIndex = benchmark2CurrentIndex + 1
-    setBenchmark2CurrentIndex(nextIndex)
+    // Check if typed character matches
+    if (key.toLowerCase() === expectedChar.toLowerCase()) {
+      // Correct character
+      const newInput = benchmark2TypedInput + key
+      setBenchmark2TypedInput(newInput)
 
-    // Check if we've reached the end
-    if (nextIndex >= benchmark2Words.length) {
-      completeBenchmark2()
+      // Move to next character
+      if (benchmark2CurrentChar + 1 >= currentWord.length) {
+        // Word complete - mark as correct
+        const newStatuses = [...benchmark2WordStatuses]
+        const wordIndex = benchmark2CurrentSentence * 1000 + benchmark2CurrentWord
+        newStatuses[wordIndex] = 1 // Correct
+        setBenchmark2WordStatuses(newStatuses)
+
+        // Move to next word
+        if (benchmark2CurrentWord + 1 >= currentSentence.length) {
+          // Sentence complete
+          if (benchmark2CurrentSentence + 1 >= benchmark2Sentences.length) {
+            // All sentences complete!
+            completeBenchmark2()
+          } else {
+            // Next sentence
+            setBenchmark2CurrentSentence(benchmark2CurrentSentence + 1)
+            setBenchmark2CurrentWord(0)
+            setBenchmark2CurrentChar(0)
+            setBenchmark2TypedInput('')
+          }
+        } else {
+          // Next word in same sentence
+          setBenchmark2CurrentWord(benchmark2CurrentWord + 1)
+          setBenchmark2CurrentChar(0)
+          setBenchmark2TypedInput('')
+        }
+      } else {
+        // Next character in same word
+        setBenchmark2CurrentChar(benchmark2CurrentChar + 1)
+      }
+    } else {
+      // Incorrect character - mark word as incorrect/missed
+      const newStatuses = [...benchmark2WordStatuses]
+      const wordIndex = benchmark2CurrentSentence * 1000 + benchmark2CurrentWord
+      newStatuses[wordIndex] = 3 // Yellow/missed
+      setBenchmark2WordStatuses(newStatuses)
+
+      // Skip to next word
+      if (benchmark2CurrentWord + 1 >= currentSentence.length) {
+        // Sentence complete
+        if (benchmark2CurrentSentence + 1 >= benchmark2Sentences.length) {
+          completeBenchmark2()
+        } else {
+          setBenchmark2CurrentSentence(benchmark2CurrentSentence + 1)
+          setBenchmark2CurrentWord(0)
+          setBenchmark2CurrentChar(0)
+          setBenchmark2TypedInput('')
+        }
+      } else {
+        setBenchmark2CurrentWord(benchmark2CurrentWord + 1)
+        setBenchmark2CurrentChar(0)
+        setBenchmark2TypedInput('')
+      }
     }
   }
 
-  const completeBenchmark2 = async () => {
+  const completeBenchmark2 = () => {
     setBenchmark2Completed(true)
     setBenchmark2Started(false)
 
     // Calculate results
-    const totalWords = benchmark2CurrentIndex
-    const correctWords = benchmark2WordStatuses.slice(0, benchmark2CurrentIndex).filter(status => status === 1).length
-    const skippedWords = benchmark2WordStatuses.slice(0, benchmark2CurrentIndex).filter(status => status === 3).length
-    const timeElapsed = 120 - benchmark2Timer
-    const timeElapsedMinutes = Math.max(timeElapsed / 60, 0.1) // Minimum 0.1 minutes to avoid division by zero
-    const wordsPerMinute = Math.round(totalWords / timeElapsedMinutes)
-    const completionRate = Math.round((totalWords / benchmark2Words.length) * 100)
-    const skipRate = totalWords > 0 ? Math.round((skippedWords / totalWords) * 100) : 0
+    const totalWords = benchmark2Sentences.reduce((sum, sentence) => sum + sentence.length, 0)
+    const correctWords = Object.values(benchmark2WordStatuses).filter(status => status === 1).length
+    const incorrectWords = Object.values(benchmark2WordStatuses).filter(status => status === 3).length
+    const accuracy = Math.round((correctWords / totalWords) * 100)
 
     const results = {
       totalWords,
       correctWords,
-      skippedWords,
-      timeElapsed,
-      wordsPerMinute,
-      completionRate,
-      skipRate,
+      incorrectWords,
+      accuracy,
       benchmarkType: 'benchmark2'
     }
 
-    // Add AI analysis for reading pace assessment
-    try {
-      const aiAnalysis = await analyzeReadingPace(results)
-      results.aiAnalysis = aiAnalysis
-    } catch (error) {
-      console.error('AI analysis failed:', error)
-      results.aiAnalysis = null
-    }
-
     setBenchmark2Results(results)
-  }
-
-  // AI analysis function for Benchmark 2
-  const analyzeReadingPace = async (results) => {
-    const analysisData = {
-      mode: 'reading_pace',
-      readingMetrics: {
-        wordsPerMinute: results.wordsPerMinute,
-        completionRate: results.completionRate,
-        skipRate: results.skipRate,
-        totalWords: results.totalWords,
-        correctWords: results.correctWords,
-        skippedWords: results.skippedWords,
-        timeElapsed: results.timeElapsed
-      },
-      text: `Reading assessment results: User read ${results.totalWords} words in ${results.timeElapsed} seconds (${results.wordsPerMinute} WPM), with ${results.skipRate}% skip rate and ${results.completionRate}% completion rate.`
-    }
-
-    const response = await fetch('/api/analyze', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(analysisData),
-    })
-
-    if (!response.ok) {
-      throw new Error('AI analysis request failed')
-    }
-
-    const result = await response.json()
-    return result.analysis
   }
 
   const handleBenchmark2SaveResults = async () => {
@@ -215,6 +220,21 @@ function App() {
       setBenchmark2SaveLoading(false)
       // Could add error modal here like Benchmark 1
     }
+  }
+
+  // Initialize Benchmark 2
+  const initializeBenchmark2 = () => {
+    setBenchmark2CurrentSentence(0)
+    setBenchmark2CurrentWord(0)
+    setBenchmark2CurrentChar(0)
+    setBenchmark2TypedInput('')
+    setBenchmark2WordStatuses([])
+    setBenchmark2Completed(false)
+    setBenchmark2Results(null)
+  }
+
+  const startBenchmark2Test = () => {
+    setBenchmark2Started(true)
   }
 
   const handleBenchmark2RestartWithConfirm = () => {
@@ -275,50 +295,25 @@ function App() {
     }
   }, [testStarted, isAssessmentActive, benchmarkCompleted, canSkipCurrentWord, skipCurrentWord])
 
-  // Keyboard event handler for Benchmark 2
+  // Keyboard event handler for Benchmark 2 - Typing test
   useEffect(() => {
     const handleBenchmark2KeyPress = (event) => {
-      if (!benchmark2Started || benchmark2Completed || benchmark2CurrentIndex >= benchmark2Words.length) {
-        return
-      }
+      if (!benchmark2Started || benchmark2Completed) return
 
-      event.preventDefault()
-
-      if (event.key === ' ') {
-        // Space = Mark as correct (green)
-        handleBenchmark2WordAction(1) // 1 = correct
-      } else if (event.key === 'Enter') {
-        // Enter = Skip word (yellow)
-        handleBenchmark2WordAction(3) // 3 = skipped
+      // Only handle letter keys
+      if (event.key.length === 1 && event.key.match(/[a-z]/i)) {
+        event.preventDefault()
+        handleTyping(event.key)
       }
     }
 
     if (benchmark2Started && !benchmark2Completed && currentPage === 'benchmark2') {
-      document.addEventListener('keydown', handleBenchmark2KeyPress)
-      return () => document.removeEventListener('keydown', handleBenchmark2KeyPress)
+      document.addEventListener('keypress', handleBenchmark2KeyPress)
+      return () => document.removeEventListener('keypress', handleBenchmark2KeyPress)
     }
-  }, [benchmark2Started, benchmark2Completed, benchmark2CurrentIndex, benchmark2Words.length, currentPage, handleBenchmark2WordAction])
+  }, [benchmark2Started, benchmark2Completed, currentPage, benchmark2CurrentSentence, benchmark2CurrentWord, benchmark2CurrentChar, benchmark2TypedInput])
 
-  // Benchmark 2 timer
-  useEffect(() => {
-    let timer
-    if (benchmark2Started && !benchmark2Completed && benchmark2Timer > 0) {
-      timer = setInterval(() => {
-        setBenchmark2Timer((prev) => {
-          if (prev <= 1) {
-            // Time's up
-            completeBenchmark2()
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
-    }
-
-    return () => {
-      if (timer) clearInterval(timer)
-    }
-  }, [benchmark2Started, benchmark2Completed, benchmark2Timer, completeBenchmark2])
+  // No timer needed for typing test
 
   // No input detection for microphone status
   useEffect(() => {
@@ -363,8 +358,15 @@ function App() {
   const [selectedPassage] = useState(() => Math.floor(Math.random() * passages.length))
   const passage = passages[selectedPassage]
 
-  // Benchmark 2 reading passage
-  const benchmark2Passage = "Technology has transformed the way we communicate, work, and live our daily lives. From smartphones that connect us instantly to people across the globe, to artificial intelligence that helps us solve complex problems, we are living in an era of unprecedented digital advancement. However, this rapid technological progress also brings new challenges. Privacy concerns, digital addiction, and the digital divide between those who have access to technology and those who do not are important issues that society must address. Education systems are adapting to prepare students for a future where digital literacy is as important as traditional reading and writing skills. Healthcare is being revolutionized through telemedicine and AI-powered diagnostic tools. Environmental sustainability is being enhanced through smart city technologies and renewable energy innovations. As we move forward, it is crucial that we harness the benefits of technology while being mindful of its potential negative impacts on our society, relationships, and mental well-being."
+  // Benchmark 2 - Progressive typing difficulty sentences (dyslexia-focused)
+  const benchmark2Sentences = [
+    "the quick brown fox jumps over the lazy dog".split(' '),
+    "many people believe technology helps daily communication efficiency".split(' '),
+    "cognitive processing requires specific neural pathways through brain regions".split(' '),
+    "differentiation between sequential patterns demonstrates comprehensive analytical capabilities".split(' '),
+    "pharmaceutical technological advancement necessitates multidisciplinary collaborative research initiatives".split(' '),
+    "neuropsychological rehabilitation methodologies incorporate evidence-based interventional therapeutic strategies".split(' ')
+  ]
 
   // Function to break passage into 30-word test chunks, then into 5-word sentences
   const createTestChunks = (passageText) => {
@@ -1138,60 +1140,61 @@ function App() {
 
           {!benchmark2Started && !benchmark2Completed && (
             <div className="benchmark2-start-screen">
-              <h1>Benchmark 2 - Reading Pace Assessment</h1>
-              <p>Read through the paragraph using keyboard controls. You have 2 minutes.</p>
+              <h1>Benchmark 2 - Typing Assessment</h1>
+              <p>Type each sentence as it appears. Words get progressively more challenging.</p>
               <div className="controls-reminder">
-                <div><strong>Space:</strong> Mark word as read correctly (green)</div>
-                <div><strong>Enter:</strong> Skip word (yellow)</div>
+                <div><strong>Blue:</strong> Current word you're typing</div>
+                <div><strong>Green:</strong> Correctly typed</div>
+                <div><strong>Yellow:</strong> Missed or incorrect</div>
               </div>
               <button className="begin-benchmark-btn" onClick={startBenchmark2Test}>
-                Begin Reading Test
+                Begin Typing Test
               </button>
             </div>
           )}
 
           {benchmark2Started && !benchmark2Completed && (
             <div className="benchmark2-test-interface">
-              <div className="benchmark2-header">
-                <div className="timer-display">
-                  Time: {Math.floor(benchmark2Timer / 60)}:{(benchmark2Timer % 60).toString().padStart(2, '0')}
-                </div>
-                <div className="progress-display">
-                  Words: {benchmark2CurrentIndex}/{benchmark2Words.length}
-                </div>
-              </div>
-
-              <div className="reading-passage">
-                {benchmark2Words.map((word, index) => {
-                  const status = benchmark2WordStatuses[index]
-                  const isCurrent = index === benchmark2CurrentIndex
-                  const isRead = index < benchmark2CurrentIndex
+              <div className="typing-sentences">
+                {benchmark2Sentences.map((sentence, sentenceIndex) => {
+                  const isCurrent = sentenceIndex === benchmark2CurrentSentence
+                  const isPast = sentenceIndex < benchmark2CurrentSentence
+                  const distanceFromCurrent = sentenceIndex - benchmark2CurrentSentence
+                  const opacity = isCurrent ? 1 : isPast ? 0.3 : Math.max(0.1, 1 - (distanceFromCurrent * 0.15))
 
                   return (
-                    <span
-                      key={index}
-                      className={`passage-word ${
-                        isCurrent ? 'current-word' :
-                        status === 1 ? 'correct-word' :
-                        status === 3 ? 'skipped-word' :
-                        isRead ? 'neutral-word' : 'unread-word'
-                      }`}
+                    <div
+                      key={sentenceIndex}
+                      className="sentence-line"
+                      style={{ opacity }}
                     >
-                      {word}{' '}
-                    </span>
+                      {sentence.map((word, wordIndex) => {
+                        const wordKey = sentenceIndex * 1000 + wordIndex
+                        const status = benchmark2WordStatuses[wordKey]
+                        const isCurrentWord = isCurrent && wordIndex === benchmark2CurrentWord
+
+                        return (
+                          <span
+                            key={wordIndex}
+                            className={`typing-word ${
+                              isCurrentWord ? 'current-word' :
+                              status === 1 ? 'correct-word' :
+                              status === 3 ? 'skipped-word' :
+                              'unread-word'
+                            }`}
+                          >
+                            {word}{' '}
+                          </span>
+                        )
+                      })}
+                    </div>
                   )
                 })}
               </div>
 
-              <div className="benchmark2-controls-display">
-                <div className="control-item">
-                  <span className="key-indicator">Space</span>
-                  <span>Correct (Green)</span>
-                </div>
-                <div className="control-item">
-                  <span className="key-indicator">Enter</span>
-                  <span>Skip (Yellow)</span>
-                </div>
+              <div className="typing-input-display">
+                <div className="input-label">Your typing:</div>
+                <div className="typed-text">{benchmark2TypedInput}</div>
               </div>
             </div>
           )}
@@ -1199,44 +1202,27 @@ function App() {
           {benchmark2Completed && benchmark2Results && (
             <div className="benchmark2-results">
               <div className="results-header">
-                <h2>Reading Assessment Complete!</h2>
+                <h2>Typing Assessment Complete!</h2>
               </div>
 
               <div className="results-grid">
                 <div className="result-item">
                   <div className="result-value">{benchmark2Results.totalWords}</div>
-                  <div className="result-label">Words Read</div>
+                  <div className="result-label">Total Words</div>
                 </div>
                 <div className="result-item">
                   <div className="result-value">{benchmark2Results.correctWords}</div>
-                  <div className="result-label">Marked Correct</div>
+                  <div className="result-label">Correct</div>
                 </div>
                 <div className="result-item">
-                  <div className="result-value">{benchmark2Results.skippedWords}</div>
-                  <div className="result-label">Words Skipped</div>
+                  <div className="result-value">{benchmark2Results.incorrectWords}</div>
+                  <div className="result-label">Incorrect</div>
                 </div>
                 <div className="result-item">
-                  <div className="result-value">{benchmark2Results.wordsPerMinute}</div>
-                  <div className="result-label">Words Per Minute</div>
-                </div>
-                <div className="result-item">
-                  <div className="result-value">{benchmark2Results.completionRate}%</div>
-                  <div className="result-label">Completion Rate</div>
-                </div>
-                <div className="result-item">
-                  <div className="result-value">{benchmark2Results.skipRate}%</div>
-                  <div className="result-label">Skip Rate</div>
+                  <div className="result-value">{benchmark2Results.accuracy}%</div>
+                  <div className="result-label">Accuracy</div>
                 </div>
               </div>
-
-              {benchmark2Results.aiAnalysis && (
-                <div className="ai-analysis-section">
-                  <h3>Reading Pace Analysis</h3>
-                  <div className="ai-analysis-content">
-                    <p>{benchmark2Results.aiAnalysis}</p>
-                  </div>
-                </div>
-              )}
 
               <div className="benchmark2-actions">
                 <button
@@ -1550,23 +1536,23 @@ function App() {
         <div className="modal-overlay" onClick={() => closeModal(setShowBenchmark2Modal)}>
           <div className={`benchmark-modal ${modalClosing ? 'modal-closing' : ''}`} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Benchmark 2 - Reading Pace Assessment</h2>
+              <h2>Benchmark 2 - Typing Assessment</h2>
             </div>
 
             <div className="modal-content">
               <div className="demo-simple">
                 <div className="demo-states">
                   <div className="demo-state">
-                    <span className="demo-word current">reading</span>
+                    <span className="demo-word current">typing</span>
                     <div className="demo-label">current word</div>
                   </div>
                   <div className="demo-state">
                     <span className="demo-word completed">correct</span>
-                    <div className="demo-label">Space (correct)</div>
+                    <div className="demo-label">typed correctly</div>
                   </div>
                   <div className="demo-state">
-                    <span className="demo-word incorrect">skipped</span>
-                    <div className="demo-label">Enter (skip)</div>
+                    <span className="demo-word incorrect">missed</span>
+                    <div className="demo-label">incorrect</div>
                   </div>
                 </div>
               </div>
@@ -1574,10 +1560,7 @@ function App() {
               <div className="separator-line"></div>
 
               <div className="test-description">
-                <p>Read through a paragraph at your own pace using keyboard controls. Spacebar marks words correct (green), Enter skips words (yellow). You have 2 minutes to read as much as possible.</p>
-                <div style={{marginTop: '10px', fontSize: '14px', color: '#666'}}>
-                  Controls: <strong>Space</strong> Correct | <strong>Enter</strong> Skip
-                </div>
+                <p>Type 6 sentences with progressively challenging words. Current word is blue, correct words turn green, incorrect turn yellow. Words increase in difficulty from simple to complex medical terms.</p>
               </div>
             </div>
 
