@@ -64,6 +64,38 @@ const saveVotesToStorage = (votes) => {
   }
 };
 
+// Animated counter component
+function AnimatedCounter({ value, duration = 800 }) {
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    let start = displayValue;
+    let end = value;
+    let startTime = null;
+
+    const animate = (currentTime) => {
+      if (!startTime) startTime = currentTime;
+      const progress = Math.min((currentTime - startTime) / duration, 1);
+
+      // Easing function for smooth animation
+      const easeOutQuad = progress * (2 - progress);
+      const current = Math.floor(start + (end - start) * easeOutQuad);
+
+      setDisplayValue(current);
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+
+    if (value !== displayValue) {
+      requestAnimationFrame(animate);
+    }
+  }, [value]);
+
+  return <>{displayValue}</>;
+}
+
 function ChatInterface({ benchmarkData, onClose }) {
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
@@ -361,11 +393,15 @@ Gemini framed uncertainty as cognitive nuance.`,
           <div className="stats-corner">
             <div className="stat-counter llama-counter">
               <span className="counter-label">LLAMA FLAGS</span>
-              <span className="counter-value">{stats.llamaFlags}</span>
+              <span className="counter-value">
+                <AnimatedCounter value={stats.llamaFlags} duration={600} />
+              </span>
             </div>
             <div className="stat-counter gemini-counter">
               <span className="counter-label">GEMINI FLAGS</span>
-              <span className="counter-value">{stats.geminiFlags}</span>
+              <span className="counter-value">
+                <AnimatedCounter value={stats.geminiFlags} duration={600} />
+              </span>
             </div>
           </div>
         ) : null}

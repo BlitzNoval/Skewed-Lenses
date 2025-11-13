@@ -102,6 +102,26 @@ function App() {
       return
     }
 
+    // Handle Tab or Enter - skip word entirely
+    if (char === 'Tab' || char === 'Enter') {
+      // Mark word as skipped
+      const newStatuses = [...benchmark2WordStatuses]
+      newStatuses[benchmark2CurrentIndex] = 3 // Mark as skipped (yellow)
+      setBenchmark2WordStatuses(newStatuses)
+
+      // Move to next word
+      const nextIndex = benchmark2CurrentIndex + 1
+      setBenchmark2CurrentIndex(nextIndex)
+      setBenchmark2TypedWord('')
+      setBenchmark2CurrentCharIndex(0)
+
+      // Check if we've reached the end
+      if (nextIndex >= benchmark2Words.length) {
+        completeBenchmark2()
+      }
+      return
+    }
+
     // Handle space - move to next word (only if word is complete or partially typed)
     if (char === ' ') {
       if (currentTyped.length > 0) {
@@ -885,6 +905,26 @@ function App() {
               </button>
             </div>
 
+            {/* About the Benchmarks */}
+            <div className="about-benchmarks">
+              <h3>About the Benchmarks</h3>
+              <p>These two reading benchmarks measure different aspects of reading performance.</p>
+
+              <div className="benchmark-description">
+                <h4>Benchmark 1: Oral Reading Fluency</h4>
+                <p>Tracks accuracy, fluency, and pace while reading aloud.</p>
+              </div>
+
+              <div className="benchmark-description">
+                <h4>Benchmark 2: Reading Pace Assessment</h4>
+                <p>Tracks speed, skip rate, and reading endurance during a timed reading.</p>
+              </div>
+
+              <p className="ai-perspective-note">
+                Once both benchmarks are complete, you can view The AI's Perspective to see how two AI models interpret the same results in a discussion.
+              </p>
+            </div>
+
             <button
               className="persistent-home-btn"
               onClick={() => handlePageTransition('home')}
@@ -1257,8 +1297,8 @@ function App() {
 
               <div className="benchmark2-controls-display">
                 <div className="control-item">
-                  <div className="control-key">TYPE</div>
-                  <div className="control-label">Type each word • Auto-advances when complete</div>
+                  <div className="control-key">Instructions</div>
+                  <div className="control-label">Type each word • Auto-advances when complete • SPACE to skip partial • TAB/ENTER to skip entire word</div>
                 </div>
               </div>
             </div>
