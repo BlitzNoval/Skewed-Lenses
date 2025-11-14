@@ -1038,6 +1038,9 @@ function App() {
             <p>
               Supervision: Hanli Geyser
             </p>
+            <p>
+              Speech recognition powered by Whisper AI
+            </p>
           </div>
         </div>
         <div className="back-to-top">
