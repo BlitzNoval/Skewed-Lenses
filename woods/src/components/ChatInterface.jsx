@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './ChatInterface.css';
 import AnnotatedText from './AnnotatedText';
+import { saveConversationMessage, saveAnnotationBatch, submitVote, generateConversationId } from '../lib/supabase';
+import { generateConversationId as generateId } from '../hooks/useSessionTracking';
 
 const AI_MODELS = {
   llama: {
@@ -96,12 +98,13 @@ function AnimatedCounter({ value, duration = 1400 }) {
   return <>{displayValue}</>;
 }
 
-function ChatInterface({ benchmarkData, onClose }) {
+function ChatInterface({ benchmarkData, onClose, sessionId, hasConsented }) {
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
   const [showHighlights, setShowHighlights] = useState(false);
   const [conversationComplete, setConversationComplete] = useState(false);
   const [allVotes, setAllVotes] = useState(() => loadVotesFromStorage()); // All votes from all users
+  const [conversationId] = useState(() => generateId()); // Generate unique conversation ID once
   const [myVotes, setMyVotes] = useState({}); // Current user's votes
   const [stats, setStats] = useState({ llamaFlags: 0, geminiFlags: 0 });
   const messagesEndRef = useRef(null);
@@ -275,7 +278,7 @@ function ChatInterface({ benchmarkData, onClose }) {
       // Longer typing delay - 2.5 to 4 seconds
       const typingDuration = Math.min(text.length * 20, 4000) + 1000;
 
-      setTimeout(() => {
+      setTimeout(async () => {
         // Replace typing indicator with full message
         setMessages(prev =>
           prev.map(msg =>
@@ -290,6 +293,35 @@ function ChatInterface({ benchmarkData, onClose }) {
               : msg
           )
         );
+
+        // Save to Supabase if user consented
+        if (hasConsented && sessionId) {
+          await saveConversationMessage(sessionId, {
+            conversation_id: conversationId,
+            turn_number: turnNumber,
+            model: currentModel,
+            role: 'assistant',
+            content: text,
+            metadata: { annotations }
+          });
+
+          // Save annotations to database
+          if (annotations && annotations.length > 0) {
+            const annotationsToSave = annotations.map((ann, idx) => ({
+              annotation_id: `${conversationId}-turn${turnNumber}-ann${idx}`,
+              conversation_id: conversationId,
+              flagged_text: ann.text,
+              explanation: ann.explanation,
+              bias_type: ann.category || 'general',
+              flagged_by_model: currentModel,
+              original_model: currentModel === 'llama' ? 'gemini' : 'llama',
+              turn_number: turnNumber
+            }));
+
+            await saveAnnotationBatch(sessionId, conversationId, annotationsToSave);
+          }
+        }
+
         resolve();
       }, typingDuration);
     });
@@ -313,7 +345,7 @@ Gemini framed uncertainty as cognitive nuance.`,
     }, 500);
   };
 
-  const handleBiasVote = (messageId, annotationIndex, vote) => {
+  const handleBiasVote = async (messageId, annotationIndex, vote) => {
     const voteKey = `${messageId}-${annotationIndex}`;
 
     // Track this user's vote
@@ -335,6 +367,12 @@ Gemini framed uncertainty as cognitive nuance.`,
       saveVotesToStorage(updated);
       return updated;
     });
+
+    // Save to Supabase if user consented
+    if (hasConsented && sessionId) {
+      const annotationId = `${conversationId}-turn${messageId.replace('msg-', '')}-ann${annotationIndex}`;
+      await submitVote(sessionId, annotationId, vote);
+    }
   };
 
   const getVoteStats = (messageId, annotationIndex) => {

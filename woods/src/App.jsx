@@ -2,8 +2,12 @@ import React, { useState, useEffect } from 'react'
 import './App.css'
 import PlasmaBackground from './components/PlasmaBackground'
 import ChatInterface from './components/ChatInterface'
+import PrivacyModal from './components/PrivacyModal'
+import ResearchExport from './components/ResearchExport'
 import useSpeechStore from './store/useSpeechStore'
 import useSpeechRecognition from './hooks/useSpeechRecognition'
+import useSessionTracking from './hooks/useSessionTracking'
+import { saveBenchmark } from './lib/supabase'
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home')
@@ -37,6 +41,10 @@ function App() {
   const [currentBenchmark, setCurrentBenchmark] = useState('benchmark1')
   const [audioLevel, setAudioLevel] = useState(0)
   const [noInputDetected, setNoInputDetected] = useState(false)
+
+  // Privacy & Session Tracking
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false)
+  const { sessionId, isInitialized, hasConsented, updateConsent } = useSessionTracking()
 
   // Benchmark 2 specific states - Typing Assessment
   const [benchmark2Active, setBenchmark2Active] = useState(false)
@@ -249,18 +257,6 @@ function App() {
     setBenchmark2SaveLoading(true)
 
     try {
-      // Simulate async save operation like Benchmark 1
-      await new Promise((resolve, reject) => {
-        setTimeout(() => {
-          const success = Math.random() > 0.1 // 90% success rate
-          if (success) {
-            resolve()
-          } else {
-            reject(new Error('Save failed'))
-          }
-        }, 2000) // 2 second loading
-      })
-
       // Save benchmark 2 results
       const savedResults = {
         ...savedBenchmarkResults,
@@ -272,6 +268,19 @@ function App() {
       setSavedBenchmarkResults(savedResults)
       localStorage.setItem('savedBenchmarkResults', JSON.stringify(savedResults))
       setBenchmarkComplete(prev => ({ ...prev, benchmark2: true }))
+
+      // Save to Supabase database (if user consented)
+      if (hasConsented && sessionId && benchmark2Results) {
+        await saveBenchmark(sessionId, {
+          benchmark_type: 'typing_pace',
+          words_per_minute: benchmark2Results.wpm,
+          completion_rate: benchmark2Results.completionRate,
+          skip_rate: benchmark2Results.skipRate,
+          total_typed_words: benchmark2Results.totalWords,
+          time_elapsed: benchmark2Results.timeElapsed,
+          typing_data: benchmark2Results.wordStatuses || []
+        })
+      }
 
       setBenchmark2SaveLoading(false)
       setBenchmark2SaveSuccess(true)
@@ -514,6 +523,20 @@ function App() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  // Privacy Modal 'P' key listener (global)
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      // Only trigger on homepage and when 'P' key is pressed (not in input fields)
+      if (currentPage === 'home' && e.key.toLowerCase() === 'p' && !e.target.matches('input, textarea')) {
+        e.preventDefault()
+        setShowPrivacyModal(true)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyPress)
+    return () => window.removeEventListener('keydown', handleKeyPress)
+  }, [currentPage])
+
   // Smooth scroll handler
   const scrollToTop = () => {
     window.scrollTo({
@@ -662,19 +685,6 @@ function App() {
     setIsSaving(true)
 
     try {
-      // Simulate async save operation
-      await new Promise((resolve, reject) => {
-        setTimeout(() => {
-          // For now, always succeed. Later you can add real error handling
-          const success = Math.random() > 0.1 // 90% success rate for demo
-          if (success) {
-            resolve()
-          } else {
-            reject(new Error('Save failed'))
-          }
-        }, 2000) // 2 second loading
-      })
-
       saveResults() // Call the actual save function
 
       // Save to persistent storage with benchmark identifier
@@ -690,6 +700,18 @@ function App() {
 
       setSavedBenchmarkResults(savedResults)
       localStorage.setItem('savedBenchmarkResults', JSON.stringify(savedResults))
+
+      // Save to Supabase database (if user consented)
+      if (hasConsented && sessionId) {
+        await saveBenchmark(sessionId, {
+          benchmark_type: 'oral_fluency',
+          fluency_score: benchmarkResults.fluencyPercentage,
+          total_words: benchmarkResults.totalWords,
+          correct_words: benchmarkResults.correctWords,
+          total_attempts: benchmarkResults.totalAttempts,
+          word_data: benchmarkResults.wordStatuses || []
+        })
+      }
 
       // Update completion status
       setBenchmarkComplete(prev => ({
@@ -828,6 +850,21 @@ function App() {
       globalIndex += sentences[i]?.length || 0
     }
     return globalIndex + (currentWordIndex - globalIndex)
+  }
+
+  // Privacy Modal Handlers
+  const handlePrivacyAccept = () => {
+    updateConsent(true)
+    setShowPrivacyModal(false)
+  }
+
+  const handlePrivacyDecline = () => {
+    updateConsent(false)
+    setShowPrivacyModal(false)
+  }
+
+  const handlePrivacyClose = () => {
+    setShowPrivacyModal(false)
   }
 
   const completedCount = Object.values(benchmarkComplete).filter(Boolean).length
@@ -1048,6 +1085,28 @@ function App() {
             <span className="back-arrow">↑</span>
             <span className="back-text">BACK TO TOP</span>
           </a>
+        </div>
+
+        {/* Footer with Research Export Link */}
+        <div className="homepage-footer">
+          <p>
+            <button
+              className="research-export-link"
+              onClick={() => setCurrentPage('research-export')}
+            >
+              📊 Research Data Export
+            </button>
+            <span className="footer-divider">|</span>
+            <button
+              className="privacy-link"
+              onClick={() => setShowPrivacyModal(true)}
+            >
+              🔐 Privacy & Data
+            </button>
+          </p>
+          <p className="footer-note">
+            Anonymous data collection for academic research • Press <kbd>P</kbd> for privacy info
+          </p>
         </div>
       </div>
     </section>
@@ -1376,8 +1435,15 @@ function App() {
             benchmark1: savedBenchmarkResults.benchmark1,
             benchmark2: savedBenchmarkResults.benchmark2
           }}
+          sessionId={sessionId}
+          hasConsented={hasConsented}
           onClose={() => setCurrentPage('begin')}
         />
+      )}
+
+      {/* Research Export Dashboard */}
+      {currentPage === 'research-export' && (
+        <ResearchExport onClose={() => setCurrentPage('home')} />
       )}
 
       {currentPage === 'benchmark2' && (
@@ -1994,6 +2060,14 @@ function App() {
       )}
 
       {/* Other modals... */}
+
+      {/* Privacy & Data Collection Modal */}
+      <PrivacyModal
+        isOpen={showPrivacyModal}
+        onClose={handlePrivacyClose}
+        onAccept={handlePrivacyAccept}
+        onDecline={handlePrivacyDecline}
+      />
     </div>
   )
 }
