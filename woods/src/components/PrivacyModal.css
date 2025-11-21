@@ -170,33 +170,12 @@
   background: transparent;
   color: rgba(255, 255, 255, 0.9);
   cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
+  transition: all 0.2s ease;
   min-width: 140px;
 }
 
-.privacy-btn::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  transform: translate(-50%, -50%);
-  transition: width 0.6s, height 0.6s;
-}
-
-.privacy-btn:hover::before {
-  width: 300px;
-  height: 300px;
-}
-
 .privacy-btn:hover {
-  border-color: rgba(255, 255, 255, 0.6);
-  box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .privacy-btn-decline {
@@ -204,19 +183,9 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
-.privacy-btn-decline:hover {
-  border-color: rgba(255, 255, 255, 0.4);
-  color: rgba(255, 255, 255, 0.7);
-}
-
 .privacy-btn-accept {
   border-color: rgba(0, 212, 255, 0.5);
   color: #00d4ff;
-}
-
-.privacy-btn-accept:hover {
-  border-color: #00d4ff;
-  box-shadow: 0 0 30px rgba(0, 212, 255, 0.4);
 }
 
 /* Meta */

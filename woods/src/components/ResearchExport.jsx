@@ -132,36 +132,11 @@ function ResearchExport({ onClose }) {
           <button className="close-btn" onClick={onClose} aria-label="Close">×</button>
         </header>
 
-        {/* Statistics Overview */}
-        <section className="stats-section">
-          <h2>📊 Database Statistics</h2>
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-value">{stats?.totalSessions || 0}</div>
-              <div className="stat-label">Total Sessions</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-value">{stats?.totalConversations || 0}</div>
-              <div className="stat-label">AI Messages</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-value">{stats?.totalAnnotations || 0}</div>
-              <div className="stat-label">Bias Flags</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-value">{stats?.totalVotes || 0}</div>
-              <div className="stat-label">User Votes</div>
-            </div>
-          </div>
-        </section>
-
         {/* Export Options */}
         <section className="export-section">
-          <h2>📥 Export Data</h2>
-
           <div className="export-option">
             <h3>Full Database Export (JSON)</h3>
-            <p>Download all data from all tables in JSON format for programmatic analysis.</p>
+            <p>Download all data from all tables in JSON format</p>
             <button
               className="export-btn primary"
               onClick={exportAllDataAsJSON}
@@ -174,12 +149,12 @@ function ResearchExport({ onClose }) {
           <div className="export-divider"></div>
 
           <h3>Individual Tables (CSV)</h3>
-          <p>Download specific tables as CSV files for Excel/spreadsheet analysis.</p>
+          <p>Download specific tables as CSV files</p>
 
           <div className="export-grid">
             <div className="export-card">
               <h4>Sessions</h4>
-              <p>Anonymous user session data with timestamps and metadata</p>
+              <p>Anonymous user session data</p>
               <button
                 className="export-btn secondary"
                 onClick={() => exportTableAsCSV('sessions')}
@@ -191,7 +166,7 @@ function ResearchExport({ onClose }) {
 
             <div className="export-card">
               <h4>Benchmarks</h4>
-              <p>Reading fluency and typing pace test results</p>
+              <p>Reading fluency and typing pace results</p>
               <button
                 className="export-btn secondary"
                 onClick={() => exportTableAsCSV('benchmarks')}
@@ -203,7 +178,7 @@ function ResearchExport({ onClose }) {
 
             <div className="export-card">
               <h4>Conversations</h4>
-              <p>Full AI debate transcripts between Llama and Gemini</p>
+              <p>AI debate transcripts</p>
               <button
                 className="export-btn secondary"
                 onClick={() => exportTableAsCSV('conversations')}
@@ -215,7 +190,7 @@ function ResearchExport({ onClose }) {
 
             <div className="export-card">
               <h4>Annotations</h4>
-              <p>AI-generated bias flags with explanations</p>
+              <p>AI-generated bias flags</p>
               <button
                 className="export-btn secondary"
                 onClick={() => exportTableAsCSV('annotations')}
@@ -227,7 +202,7 @@ function ResearchExport({ onClose }) {
 
             <div className="export-card">
               <h4>Votes</h4>
-              <p>User votes on bias validity (community consensus data)</p>
+              <p>User votes on bias validity</p>
               <button
                 className="export-btn secondary"
                 onClick={() => exportTableAsCSV('votes')}
@@ -236,17 +211,6 @@ function ResearchExport({ onClose }) {
                 Download CSV
               </button>
             </div>
-          </div>
-        </section>
-
-        {/* Research Notes */}
-        <section className="research-notes">
-          <h2>📝 Research Notes</h2>
-          <div className="note-box">
-            <p><strong>Privacy:</strong> All exported data is anonymous. Session IDs are random UUIDs with no personal information.</p>
-            <p><strong>Data Structure:</strong> JSON exports include all tables with relationships. CSV exports are flat files per table.</p>
-            <p><strong>Use Case:</strong> This data shows how people perceive AI bias in educational assessment tools.</p>
-            <p><strong>Citation:</strong> If using this data for research, please cite "Skewed Lenses" by Milind (DIGA4002A: Holding Our Space in the Age of GAI).</p>
           </div>
         </section>
       </div>
