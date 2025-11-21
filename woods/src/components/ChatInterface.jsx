@@ -310,8 +310,8 @@ function ChatInterface({ benchmarkData, onClose, sessionId, hasConsented }) {
             const annotationsToSave = annotations.map((ann, idx) => ({
               annotation_id: `${conversationId}-turn${turnNumber}-ann${idx}`,
               conversation_id: conversationId,
-              flagged_text: ann.text,
-              explanation: ann.explanation,
+              flagged_text: ann.text || ann.phrase || '',
+              explanation: ann.reason || ann.explanation || 'Bias detected',
               bias_type: ann.category || 'general',
               flagged_by_model: modelKey,
               original_model: modelKey === 'llama' ? 'gemini' : 'llama',
