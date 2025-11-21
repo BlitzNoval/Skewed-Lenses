@@ -54,6 +54,12 @@ export function useSessionTracking() {
           await createSession(storedSessionId, {
             first_visit: new Date().toISOString(),
             page_url: window.location.href,
+            session_type: 'new_user',
+            browser: navigator.userAgent,
+            screen_resolution: `${window.screen.width}x${window.screen.height}`,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            language: navigator.language,
+            referrer: document.referrer || 'direct',
           });
         }
       } else {

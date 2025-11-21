@@ -401,7 +401,64 @@ export async function getAggregateStats() {
       totalAnnotations: annotationCount?.count || 0,
     };
   } catch (error) {
-    console.error('Error fetching aggregate stats:', error);
+    // Only log errors
+    return null;
+  }
+}
+
+/**
+ * Get complete user journey with all relationships
+ * session → benchmarks → conversations → annotations → votes
+ */
+export async function getUserJourney(sessionId) {
+  try {
+    const { data: session, error: sessionError } = await supabase
+      .from('sessions')
+      .select('*')
+      .eq('session_id', sessionId)
+      .single();
+
+    if (sessionError) throw sessionError;
+
+    const { data: benchmarks } = await supabase
+      .from('benchmarks')
+      .select('*')
+      .eq('session_id', sessionId);
+
+    const { data: conversations } = await supabase
+      .from('conversations')
+      .select('*')
+      .eq('session_id', sessionId)
+      .order('turn_number', { ascending: true });
+
+    const { data: annotations } = await supabase
+      .from('annotations')
+      .select('*')
+      .eq('session_id', sessionId);
+
+    const { data: votes } = await supabase
+      .from('votes')
+      .select('*')
+      .eq('session_id', sessionId);
+
+    return {
+      session,
+      benchmarks,
+      conversations,
+      annotations,
+      votes,
+      // Create mappings for easy lookup
+      votesByAnnotation: votes?.reduce((acc, vote) => {
+        acc[vote.annotation_id] = vote;
+        return acc;
+      }, {}) || {},
+      annotationsByConversation: annotations?.reduce((acc, ann) => {
+        if (!acc[ann.conversation_id]) acc[ann.conversation_id] = [];
+        acc[ann.conversation_id].push(ann);
+        return acc;
+      }, {}) || {}
+    };
+  } catch (error) {
     return null;
   }
 }

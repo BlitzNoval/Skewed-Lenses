@@ -46,6 +46,18 @@ function App() {
   const [showPrivacyModal, setShowPrivacyModal] = useState(false)
   const { sessionId, isInitialized, hasConsented, updateConsent } = useSessionTracking()
 
+  // Auto-show privacy modal on first visit or if no consent choice made
+  useEffect(() => {
+    const consentStatus = localStorage.getItem('skewed_lenses_consent')
+    if (!consentStatus && currentPage === 'home') {
+      // Wait 1 second after page load to show modal
+      const timer = setTimeout(() => {
+        setShowPrivacyModal(true)
+      }, 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [currentPage])
+
   // Benchmark 2 specific states - Typing Assessment
   const [benchmark2Active, setBenchmark2Active] = useState(false)
   const [benchmark2Words, setBenchmark2Words] = useState([])
@@ -278,7 +290,18 @@ function App() {
           skip_rate: benchmark2Results.skipRate,
           total_typed_words: benchmark2Results.totalWords,
           time_elapsed: benchmark2Results.timeElapsed,
-          typing_data: benchmark2Results.wordStatuses || []
+          typing_data: benchmark2Results.wordStatuses || [],
+          metadata: {
+            test_name: 'Typing Pace Assessment',
+            test_date: new Date().toISOString(),
+            test_duration_seconds: benchmark2Results.timeElapsed / 1000,
+            wpm: benchmark2Results.wpm,
+            completion_percentage: benchmark2Results.completionRate,
+            skip_percentage: benchmark2Results.skipRate,
+            test_completed: true,
+            exported: false,
+            export_label: 'BENCHMARK_2_TYPING_PACE'
+          }
         })
       }
 
@@ -709,7 +732,17 @@ function App() {
           total_words: benchmarkResults.totalWords,
           correct_words: benchmarkResults.correctWords,
           total_attempts: benchmarkResults.totalAttempts,
-          word_data: benchmarkResults.wordStatuses || []
+          word_data: benchmarkResults.wordStatuses || [],
+          metadata: {
+            test_name: 'Oral Reading Fluency Test',
+            test_date: new Date().toISOString(),
+            test_duration_seconds: benchmarkResults.duration || 0,
+            accuracy_percentage: benchmarkResults.fluencyPercentage,
+            skipped_words: benchmarkResults.skippedWords || 0,
+            test_completed: true,
+            exported: false,
+            export_label: 'BENCHMARK_1_ORAL_FLUENCY'
+          }
         })
       }
 

@@ -302,7 +302,16 @@ function ChatInterface({ benchmarkData, onClose, sessionId, hasConsented }) {
             model: modelKey,
             role: 'assistant',
             content: text,
-            metadata: { annotations }
+            metadata: {
+              annotations,
+              ai_model_name: modelKey === 'llama' ? 'Llama 3.1-8b' : 'Gemini 2.0 Flash',
+              message_timestamp: new Date().toISOString(),
+              message_length: text.length,
+              annotation_count: annotations ? annotations.length : 0,
+              thinking_phrase: AI_MODELS[modelKey].thinkingPhrases[0],
+              exported: false,
+              export_label: `AI_CONVERSATION_${modelKey.toUpperCase()}_TURN_${turnNumber}`
+            }
           });
 
           // Save annotations to database
@@ -315,7 +324,17 @@ function ChatInterface({ benchmarkData, onClose, sessionId, hasConsented }) {
               bias_type: ann.category || 'general',
               flagged_by_model: modelKey,
               original_model: modelKey === 'llama' ? 'gemini' : 'llama',
-              turn_number: turnNumber
+              turn_number: turnNumber,
+              metadata: {
+                annotation_date: new Date().toISOString(),
+                flagged_by_ai: modelKey === 'llama' ? 'Llama 3.1-8b' : 'Gemini 2.0 Flash',
+                original_ai: modelKey === 'llama' ? 'Gemini 2.0 Flash' : 'Llama 3.1-8b',
+                flagged_text_length: (ann.text || ann.phrase || '').length,
+                bias_category: ann.category || 'general',
+                annotation_index: idx,
+                exported: false,
+                export_label: `BIAS_ANNOTATION_${modelKey.toUpperCase()}_TURN_${turnNumber}_ANN_${idx}`
+              }
             }));
 
             await saveAnnotationBatch(sessionId, conversationId, annotationsToSave);

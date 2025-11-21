@@ -51,94 +51,35 @@ export default function PrivacyModal({ isOpen, onClose, onAccept, onDecline }) {
 
         <div className="privacy-modal-content">
           <div className="privacy-section">
-            <h3>🔬 Research Purpose</h3>
+            <h3>Research Data Collection</h3>
             <p>
-              This project collects <strong>anonymous data</strong> to study how people perceive
-              AI bias in educational assessment tools. Your participation helps advance research
-              on AI ethics and digital coloniality.
+              This project collects <strong>anonymous data</strong> to study AI bias perception in educational tools.
             </p>
           </div>
 
           <div className="privacy-section">
-            <h3>📊 What We Track</h3>
+            <h3>What We Collect</h3>
             <ul>
-              <li>
-                <strong>Benchmark Results:</strong> Your reading fluency and typing pace scores
-                (anonymous performance data)
-              </li>
-              <li>
-                <strong>AI Conversations:</strong> The full debate between AI models about your
-                results
-              </li>
-              <li>
-                <strong>Bias Annotations:</strong> AI-generated flags for potentially biased
-                language
-              </li>
-              <li>
-                <strong>Your Votes:</strong> Whether you agree/disagree with bias flags (community
-                consensus data)
-              </li>
-              <li>
-                <strong>Session Metadata:</strong> Timestamps, browser type, and usage patterns
-                (no IP addresses or personal info)
-              </li>
+              <li>Benchmark test results (anonymous)</li>
+              <li>AI conversation transcripts</li>
+              <li>Bias annotation votes</li>
+              <li>Session metadata (no personal info)</li>
             </ul>
           </div>
 
           <div className="privacy-section">
-            <h3>🔐 How We Protect Your Privacy</h3>
+            <h3>Your Privacy</h3>
             <ul>
-              <li>
-                <strong>No personal information collected</strong> - no names, emails, or
-                identifiable data
-              </li>
-              <li>
-                <strong>Anonymous session IDs</strong> - random UUIDs that can't be traced back to
-                you
-              </li>
-              <li>
-                <strong>No cross-site tracking</strong> - data only collected within this
-                application
-              </li>
-              <li>
-                <strong>Secure storage</strong> - all data encrypted in transit and at rest
-                (Supabase cloud)
-              </li>
-              <li>
-                <strong>Research use only</strong> - data used for academic analysis and
-                educational purposes
-              </li>
-            </ul>
-          </div>
-
-          <div className="privacy-section">
-            <h3>🌍 Data Storage</h3>
-            <p>
-              All data is stored securely in an <strong>online cloud database (Supabase)</strong>.
-              This allows researchers to:
-            </p>
-            <ul>
-              <li>Analyze patterns across thousands of sessions</li>
-              <li>Study how communities collectively perceive AI bias</li>
-              <li>Export anonymized datasets for academic research</li>
-            </ul>
-          </div>
-
-          <div className="privacy-section">
-            <h3>✅ Your Rights</h3>
-            <ul>
-              <li>You can decline data collection (app still works, but votes won't be saved)</li>
-              <li>You can change your mind anytime by pressing <kbd>P</kbd> again</li>
-              <li>Your data is anonymous - we can't identify or delete specific user data</li>
-              <li>This project is for educational purposes (DIGA4002A coursework)</li>
+              <li>No personal information</li>
+              <li>Anonymous session IDs only</li>
+              <li>Secure encrypted storage</li>
+              <li>Academic research use only</li>
             </ul>
           </div>
 
           <div className="privacy-section privacy-highlight">
             <p>
-              <strong>By accepting, you consent to anonymous data collection</strong> for research
-              on AI bias perception. You're contributing to meaningful academic research on how
-              people interpret AI-generated assessments.
+              Accept to contribute to research. Decline to use locally only. Press <kbd>P</kbd> anytime to change.
             </p>
           </div>
         </div>
