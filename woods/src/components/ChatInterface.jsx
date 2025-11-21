@@ -299,7 +299,7 @@ function ChatInterface({ benchmarkData, onClose, sessionId, hasConsented }) {
           await saveConversationMessage(sessionId, {
             conversation_id: conversationId,
             turn_number: turnNumber,
-            model: currentModel,
+            model: modelKey,
             role: 'assistant',
             content: text,
             metadata: { annotations }
@@ -313,8 +313,8 @@ function ChatInterface({ benchmarkData, onClose, sessionId, hasConsented }) {
               flagged_text: ann.text,
               explanation: ann.explanation,
               bias_type: ann.category || 'general',
-              flagged_by_model: currentModel,
-              original_model: currentModel === 'llama' ? 'gemini' : 'llama',
+              flagged_by_model: modelKey,
+              original_model: modelKey === 'llama' ? 'gemini' : 'llama',
               turn_number: turnNumber
             }));
 
