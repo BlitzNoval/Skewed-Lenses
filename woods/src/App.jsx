@@ -1127,14 +1127,14 @@ function App() {
               className="research-export-link"
               onClick={() => setCurrentPage('research-export')}
             >
-              📊 Research Data Export
+              Research Data Export
             </button>
             <span className="footer-divider">|</span>
             <button
               className="privacy-link"
               onClick={() => setShowPrivacyModal(true)}
             >
-              🔐 Privacy & Data
+              Privacy & Data
             </button>
           </p>
           <p className="footer-note">
@@ -1642,7 +1642,11 @@ function App() {
                 >
                   {benchmark2SaveLoading ? (
                     <div className="save-loading">
-                      <div className="loading-spinner"></div>
+                      <div className="loading-spinner">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                      </div>
                     </div>
                   ) : benchmark2SaveSuccess ? (
                     <div className="save-success">

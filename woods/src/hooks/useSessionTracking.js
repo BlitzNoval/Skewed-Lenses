@@ -89,16 +89,23 @@ export function useSessionTracking() {
     return parseInt(count, 10);
   }
 
-  function updateConsent(accepted) {
+  async function updateConsent(accepted) {
     const consentValue = accepted ? 'accepted' : 'declined';
     localStorage.setItem('skewed_lenses_consent', consentValue);
     setHasConsented(accepted);
 
     // If user just accepted, create session in database
     if (accepted && sessionId) {
-      createSession(sessionId, {
+      await createSession(sessionId, {
         consent_given: new Date().toISOString(),
         page_url: window.location.href,
+        first_visit: new Date().toISOString(),
+        session_type: 'consent_accepted',
+        browser: navigator.userAgent,
+        screen_resolution: `${window.screen.width}x${window.screen.height}`,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        language: navigator.language,
+        referrer: document.referrer || 'direct',
       });
     }
   }

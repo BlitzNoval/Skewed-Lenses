@@ -2270,12 +2270,41 @@ html {
 }
 
 .loading-spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top: 2px solid white;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-spinner span {
+  width: 6px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.9);
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: loading-dot 1.4s infinite ease-in-out both;
+}
+
+.loading-spinner span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.loading-spinner span:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+.loading-spinner span:nth-child(3) {
+  animation-delay: 0s;
+}
+
+@keyframes loading-dot {
+  0%, 80%, 100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes spin {
@@ -4049,21 +4078,19 @@ html {
 .privacy-link {
   background: transparent;
   border: none;
-  color: #00d4ff;
+  color: rgba(255, 255, 255, 0.8);
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: color 0.2s ease;
   padding: 8px 16px;
-  border-radius: 6px;
+  border-radius: 0;
   font-family: inherit;
 }
 
 .research-export-link:hover,
 .privacy-link:hover {
-  background: rgba(0, 212, 255, 0.1);
-  color: #00e5ff;
-  transform: translateY(-2px);
+  color: rgba(255, 255, 255, 1);
 }
 
 .footer-divider {
@@ -4084,7 +4111,7 @@ html {
   padding: 2px 6px;
   font-family: 'Courier New', monospace;
   font-size: 13px;
-  color: #00d4ff;
+  color: rgba(255, 255, 255, 0.8);
   margin: 0 4px;
 }
 

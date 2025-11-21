@@ -48,6 +48,19 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
  */
 export async function createSession(sessionId, metadata = {}) {
   try {
+    // First check if session already exists
+    const { data: existingSession } = await supabase
+      .from('sessions')
+      .select('*')
+      .eq('session_id', sessionId)
+      .single();
+
+    if (existingSession) {
+      // Session exists, just return it
+      return { data: existingSession, error: null };
+    }
+
+    // Session doesn't exist, create it
     const { data, error } = await supabase
       .from('sessions')
       .insert({
@@ -71,10 +84,23 @@ export async function createSession(sessionId, metadata = {}) {
  */
 export async function updateSession(sessionId, metadata) {
   try {
+    // First check if session exists
+    const { data: existingSession } = await supabase
+      .from('sessions')
+      .select('*')
+      .eq('session_id', sessionId)
+      .single();
+
+    if (!existingSession) {
+      // Session doesn't exist, create it instead
+      return await createSession(sessionId, metadata);
+    }
+
+    // Session exists, update it
     const { data, error } = await supabase
       .from('sessions')
       .update({
-        metadata,
+        metadata: { ...existingSession.metadata, ...metadata },
         updated_at: new Date().toISOString(),
       })
       .eq('session_id', sessionId)
